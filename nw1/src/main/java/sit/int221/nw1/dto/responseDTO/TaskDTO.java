@@ -12,4 +12,5 @@ public class TaskDTO {
     private String title;
     private String assignees;
     private Status status;
+
 }

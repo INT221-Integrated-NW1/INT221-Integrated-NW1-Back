@@ -13,11 +13,13 @@ import sit.int221.nw1.dto.requestDTO.deleteTaskDTO;
 import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
 import sit.int221.nw1.dto.responseDTO.TaskDTO;
 import sit.int221.nw1.dto.responseDTO.TasksDTO;
+import sit.int221.nw1.dto.responseDTO.filteredTaskDTO;
 import sit.int221.nw1.entities.Tasks;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,18 +35,64 @@ public class TasksController {
     ListMapper listMapper;
 
 
+
+//    @GetMapping("")
+//    public ResponseEntity<Object> getAllTasks() {
+//        List<Tasks> tasks = service.getAllTasks();
+//        List<TaskDTO> tasksDTO = tasks.stream()
+//                .map(task -> {
+//                    TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
+//                    taskDTO.setStatus(task.getStatus());
+//                    return taskDTO;
+//                })
+//                .collect(Collectors.toList());
+//        return ResponseEntity.ok(tasksDTO);
+//    }
+
+    // get + filter
+// TasksController.java
     @GetMapping("")
-    public ResponseEntity<Object> getAllTasks() {
-        List<Tasks> tasks = service.getAllTasks();
-        List<TaskDTO> tasksDTO = tasks.stream()
-                .map(task -> {
-                    TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-                    taskDTO.setStatus(task.getStatus());
-                    return taskDTO;
-                })
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(tasksDTO);
+    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
+        List<Tasks> tasks;
+        if (filterStatuses == null || filterStatuses.isEmpty()) {
+            tasks = service.getAllTasks();
+            List<TaskDTO> tasksDTO = tasks.stream()
+                    .map(task -> {
+                        TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
+                        taskDTO.setStatus(task.getStatus());
+                        return taskDTO;
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(tasksDTO);
+        } else {
+            tasks = service.getTasksByStatusNames(filterStatuses);
+            List<filteredTaskDTO> tasksDTO = tasks.stream()
+                    .map(task -> {
+                        filteredTaskDTO taskDTO = modelMapper.map(task, filteredTaskDTO.class);
+                        taskDTO.setStatus(task.getStatus().getName());
+                        return taskDTO;
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(tasksDTO);
+        }
     }
+    //get + filter2
+//    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
+//        List<Tasks> tasks;
+//        if (filterStatuses == null || filterStatuses.isEmpty()) {
+//            tasks = service.getAllTasks();
+//        } else {
+//            tasks = service.getTasksByStatusNames(filterStatuses);
+//        }
+//        List<TaskDTO> tasksDTO = tasks.stream()
+//                .map(task -> {
+//                    TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
+//                    taskDTO.setStatus(task.getStatus());
+//                    return taskDTO;
+//                })
+//                .collect(Collectors.toList());
+//        return ResponseEntity.ok(tasksDTO);
+//    }
 
     @GetMapping("/{id}")
     public ResponseEntity<TasksDTO> getTaskById(@PathVariable Integer id) {
@@ -57,7 +105,6 @@ public class TasksController {
             return ResponseEntity.notFound().build();
         }
     }
-
 
     @PostMapping("") public ResponseEntity<addDTO> createTask(@RequestBody Tasks task) {
         return new ResponseEntity<>(modelMapper.map(service.createTask(task), addDTO.class), HttpStatus.CREATED);

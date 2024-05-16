@@ -32,6 +32,7 @@ public class TasksService {
     @Autowired
     private TasksRepository tasksRepository;
 
+
     public List<Tasks> getAllTasks() {
         return repository.findAll();
     }
@@ -42,24 +43,6 @@ public class TasksService {
         );
 
     }
-
-
-//    public Tasks createTask(addDTO addDTO) {
-//        // Map the addDTO to Tasks entity using ModelMapper
-//        Tasks tasks = modelMapper.map(addDTO, Tasks.class);
-//        trim(tasks); // Trim strings to handle any white spaces
-//
-//        // Determine status based on provided statusId
-//        Status status = (addDTO.getStatus().getId() != null) ?
-//                statusRepository.findById(addDTO.getStatus().getId()).orElseThrow(() ->
-//                        new ItemNotFoundException("Status with ID " + addDTO.getStatus().getId() + " does not exist")) :
-//                statusRepository.findByName("No Status").orElseThrow(() ->
-//                        new ItemNotFoundException("No Status does not exist"));
-//
-//        tasks.setStatus(status); // Set the status to the task
-//        return repository.save(tasks); // Save the task and return the saved entity
-//    }
-
     public Tasks createTask(Tasks task) {
         // Check if title, status is empty
         if (task.getTitle() == null || task.getTitle().isEmpty()) {
@@ -124,6 +107,9 @@ public class TasksService {
             task.setStatus(newStatus);
             tasksRepository.save(task);
         }
+    }
+    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
+        return repository.findByStatusNameIn(statusNames);
     }
 }
 
