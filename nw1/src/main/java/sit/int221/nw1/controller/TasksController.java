@@ -20,6 +20,7 @@ import sit.int221.nw1.services.TasksService;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,30 +53,31 @@ public class TasksController {
     // get + filter
 // TasksController.java
     @GetMapping("")
-    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
+    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses,
+                                              @RequestParam(defaultValue = "default") String sortBy) {
         List<Tasks> tasks;
         if (filterStatuses == null || filterStatuses.isEmpty()) {
             tasks = service.getAllTasks();
-            List<TaskDTO> tasksDTO = tasks.stream()
-                    .map(task -> {
-                        TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-                        taskDTO.setStatus(task.getStatus());
-                        return taskDTO;
-                    })
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(tasksDTO);
         } else {
             tasks = service.getTasksByStatusNames(filterStatuses);
-            List<filteredTaskDTO> tasksDTO = tasks.stream()
-                    .map(task -> {
-                        filteredTaskDTO taskDTO = modelMapper.map(task, filteredTaskDTO.class);
-                        taskDTO.setStatus(task.getStatus().getName());
-                        return taskDTO;
-                    })
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(tasksDTO);
         }
+
+        if (sortBy.equalsIgnoreCase("reverse")) {
+            tasks.sort(Comparator.comparing(task -> task.getStatus().getName(), Comparator.reverseOrder()));
+        } else if (sortBy.equalsIgnoreCase("status.name")) {
+            tasks.sort(Comparator.comparing(task -> task.getStatus().getName()));
+
+        } else {
+            tasks.sort(Comparator.comparing(Tasks::getCreatedOn));
+
+        }
+
+        List<TaskDTO> tasksDTO = tasks.stream()
+                .map(task -> modelMapper.map(task, TaskDTO.class))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(tasksDTO);
     }
+
     //get + filter2
 //    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 //        List<Tasks> tasks;
