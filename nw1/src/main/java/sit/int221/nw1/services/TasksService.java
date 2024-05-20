@@ -13,6 +13,7 @@ import sit.int221.nw1.dto.requestDTO.addDTO;
 import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
 import sit.int221.nw1.entities.Status;
 import sit.int221.nw1.entities.Tasks;
+import sit.int221.nw1.exception.CustomFieldException;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.repositories.StatusRepository;
 import sit.int221.nw1.repositories.TasksRepository;
@@ -36,53 +37,55 @@ public class TasksService {
     public List<Tasks> getAllTasks() {
         return repository.findAll();
     }
-    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
-        return repository.findByStatusNameIn(statusNames);
-    }
+
     public Tasks findById(Integer id) {
         return repository.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task" + " " + id + " " + "does not exist")
         );
-
     }
-    public Tasks createTask(Tasks task) {
-        // Check if title, status is empty
-        if (task.getTitle() == null || task.getTitle().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required.");
-        } else if (task.getStatus() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required.");
+    public List<Tasks> getTasksByStatusIds(List<Integer> statusIds) {
+        return repository.findByStatusIdIn(statusIds);
+    }
+
+    public Tasks createTask(addDTO addDTO) {
+        Tasks tasks = modelMapper.map(addDTO, Tasks.class);
+        if (tasks.getTitle() == null || addDTO.getTitle().isEmpty()) {
+            throw new CustomFieldException("title", "Title is required.");
         }
+        if (tasks.getStatus() == null) {
+            Status defaultStatus = statusRepository.findById(1)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Default status does not exist"));
+            tasks.setStatus(defaultStatus);
+        }
+        Status status = statusRepository.findById(addDTO.getStatus())
+                .orElseThrow(() -> new ItemNotFoundException("Status with ID " + addDTO.getStatus() + " does not exist"));
+        tasks.setStatus(status);
         try {
-            // Save task
-            return repository.save(task);
-        } catch (DataIntegrityViolationException e) {
-            // Handle specific constraint violation (e.g., unique constraint)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status does not exist");
+            return repository.save(tasks);
         } catch (Exception e) {
-            // Handle any other unexpected errors
+
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save task.", e);
         }
     }
-    public Tasks updateTask(updateTaskDTO updateDTOTask) {
-        Tasks existingTask = repository.findById(updateDTOTask.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task " + updateDTOTask.getId() + " does not exist"));
 
-        Tasks tasks = modelMapper.map(updateDTOTask, Tasks.class);
-        tasks.setCreatedOn(existingTask.getCreatedOn()); // Set 'created_on' from the existing task
 
-        trim(tasks);
-
-        // Fetch the Status entity from the database using the statusId provided in the updateDTO
-        Status status = statusRepository.findById(updateDTOTask.getStatus().getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status does not exist"));
-
-        // Set the fetched Status entity to the status field of the Tasks entity
-        tasks.setStatus(status);
-
-        return repository.save(tasks);
+    public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
+        Tasks existingTask = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
+        existingTask.setTitle(updateTaskDTO.getTitle());
+        existingTask.setDescription(updateTaskDTO.getDescription());
+        existingTask.setAssignees(updateTaskDTO.getAssignees());
+        Status status = statusRepository.findById(updateTaskDTO.getStatus())
+                .orElseThrow(() -> new ItemNotFoundException("Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
+        existingTask.setStatus(status);
+        try {
+            return repository.save(existingTask);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update task.", e);
+        }
     }
 
-      private void trim(Tasks tasks) {
+    private void trim(Tasks tasks) {
         tasks.setTitle(StringUtil.trimToNull(tasks.getTitle()));
         tasks.setDescription(StringUtil.trimToNull(tasks.getDescription()));
         tasks.setAssignees(StringUtil.trimToNull(tasks.getAssignees()));
@@ -111,6 +114,9 @@ public class TasksService {
         }
     }
 
+    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
+        return repository.findByStatusNameIn(statusNames);
+    }
 }
 
 

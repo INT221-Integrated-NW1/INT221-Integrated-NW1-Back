@@ -14,5 +14,4 @@ public class CustomError {
     private String message;
     private String instance;
 
-    // getters and setters
 }

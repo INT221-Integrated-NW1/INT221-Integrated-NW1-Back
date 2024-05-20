@@ -18,5 +18,5 @@ public class addDTO {
     @Size(min = 1,max = 30)
     private String assignees;
 
-    private Status status;
+    private Integer status;
 }
