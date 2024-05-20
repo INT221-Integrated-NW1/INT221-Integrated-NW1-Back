@@ -36,7 +36,9 @@ public class TasksService {
     public List<Tasks> getAllTasks() {
         return repository.findAll();
     }
-
+    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
+        return repository.findByStatusNameIn(statusNames);
+    }
     public Tasks findById(Integer id) {
         return repository.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task" + " " + id + " " + "does not exist")
@@ -55,7 +57,7 @@ public class TasksService {
             return repository.save(task);
         } catch (DataIntegrityViolationException e) {
             // Handle specific constraint violation (e.g., unique constraint)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to save task. Ensure data integrity.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status does not exist");
         } catch (Exception e) {
             // Handle any other unexpected errors
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save task.", e);
@@ -108,9 +110,7 @@ public class TasksService {
             tasksRepository.save(task);
         }
     }
-    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
-        return repository.findByStatusNameIn(statusNames);
-    }
+
 }
 
 

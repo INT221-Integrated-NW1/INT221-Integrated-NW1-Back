@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import sit.int221.nw1.dto.requestDTO.addDTO;
 //import sit.int221.nw1.dto.requestDTO.deleteDTO;
 import sit.int221.nw1.dto.requestDTO.deleteTaskDTO;
@@ -18,8 +17,6 @@ import sit.int221.nw1.entities.Tasks;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 
-import java.net.URI;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,21 +34,6 @@ public class TasksController {
 
 
 
-//    @GetMapping("")
-//    public ResponseEntity<Object> getAllTasks() {
-//        List<Tasks> tasks = service.getAllTasks();
-//        List<TaskDTO> tasksDTO = tasks.stream()
-//                .map(task -> {
-//                    TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-//                    taskDTO.setStatus(task.getStatus());
-//                    return taskDTO;
-//                })
-//                .collect(Collectors.toList());
-//        return ResponseEntity.ok(tasksDTO);
-//    }
-
-    // get + filter
-// TasksController.java
     @GetMapping("")
     public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses,
                                               @RequestParam(defaultValue = "default") String sortBy) {
@@ -62,39 +44,39 @@ public class TasksController {
             tasks = service.getTasksByStatusNames(filterStatuses);
         }
 
+        // Sorting logic
         if (sortBy.equalsIgnoreCase("reverse")) {
             tasks.sort(Comparator.comparing(task -> task.getStatus().getName(), Comparator.reverseOrder()));
         } else if (sortBy.equalsIgnoreCase("status.name")) {
             tasks.sort(Comparator.comparing(task -> task.getStatus().getName()));
-
         } else {
             tasks.sort(Comparator.comparing(Tasks::getCreatedOn));
-
         }
 
-        List<TaskDTO> tasksDTO = tasks.stream()
-                .map(task -> modelMapper.map(task, TaskDTO.class))
-                .collect(Collectors.toList());
+        // Mapping logic
+        List<Object> tasksDTO;
+        if (filterStatuses == null || filterStatuses.isEmpty()) {
+            tasksDTO = tasks.stream()
+                    .map(task -> {
+                        TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
+                        taskDTO.setStatus(task.getStatus());
+                        return taskDTO;
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            tasksDTO = tasks.stream()
+                    .map(task -> {
+                        filteredTaskDTO filterDTO = modelMapper.map(task, filteredTaskDTO.class);
+                        filterDTO.setStatus(task.getStatus().getName());
+                        return filterDTO;
+                    })
+                    .collect(Collectors.toList());
+        }
+
         return ResponseEntity.ok(tasksDTO);
     }
 
-    //get + filter2
-//    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
-//        List<Tasks> tasks;
-//        if (filterStatuses == null || filterStatuses.isEmpty()) {
-//            tasks = service.getAllTasks();
-//        } else {
-//            tasks = service.getTasksByStatusNames(filterStatuses);
-//        }
-//        List<TaskDTO> tasksDTO = tasks.stream()
-//                .map(task -> {
-//                    TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-//                    taskDTO.setStatus(task.getStatus());
-//                    return taskDTO;
-//                })
-//                .collect(Collectors.toList());
-//        return ResponseEntity.ok(tasksDTO);
-//    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<TasksDTO> getTaskById(@PathVariable Integer id) {
