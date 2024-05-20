@@ -15,12 +15,10 @@ public class CustomFieldException extends RuntimeException {
         this.message = message;
     }
 
-//    public String getField() {
-//        return field;
-//    }
-//
-//    @Override
-//    public String getMessage() {
-//        return message;
-//    }
+    // Add constructor to convert FieldError to CustomFieldException
+    public CustomFieldException(MultiFieldException.FieldError fieldError) {
+        super(fieldError.getMessage());
+        this.field = fieldError.getField();
+        this.message = fieldError.getMessage();
+    }
 }

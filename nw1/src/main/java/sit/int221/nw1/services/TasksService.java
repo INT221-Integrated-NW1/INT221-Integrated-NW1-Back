@@ -15,11 +15,13 @@ import sit.int221.nw1.entities.Status;
 import sit.int221.nw1.entities.Tasks;
 import sit.int221.nw1.exception.CustomFieldException;
 import sit.int221.nw1.exception.ItemNotFoundException;
+import sit.int221.nw1.exception.MultiFieldException;
 import sit.int221.nw1.repositories.StatusRepository;
 import sit.int221.nw1.repositories.TasksRepository;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -47,28 +49,70 @@ public class TasksService {
         return repository.findByStatusIdIn(statusIds);
     }
 
+//    public Tasks createTask(addDTO addDTO) {
+//        Tasks tasks = modelMapper.map(addDTO, Tasks.class);
+//        if (tasks.getTitle() == null || addDTO.getTitle().isEmpty()) {
+//            throw new CustomFieldException("title", "Title is required.");
+//        }
+//        if (tasks.getStatus() == null) {
+//            Status defaultStatus = statusRepository.findById(1)
+//                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Default status does not exist"));
+//            tasks.setStatus(defaultStatus);
+//        }
+//        Status status = statusRepository.findById(addDTO.getStatus())
+//                .orElseThrow(() -> new ItemNotFoundException("Status with ID " + addDTO.getStatus() + " does not exist"));
+//        tasks.setStatus(status);
+//        try {
+//            return repository.save(tasks);
+//        } catch (Exception e) {
+//
+//            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save task.", e);
+//        }
+//    }
+
+
     public Tasks createTask(addDTO addDTO) {
         Tasks tasks = modelMapper.map(addDTO, Tasks.class);
+
+        List<MultiFieldException.FieldError> errors = new ArrayList<>();
+
         if (tasks.getTitle() == null || addDTO.getTitle().isEmpty()) {
-            throw new CustomFieldException("title", "Title is required.");
+            errors.add(new MultiFieldException.FieldError("title", "Title is required."));
         }
-        if (tasks.getStatus() == null) {
-            Status defaultStatus = statusRepository.findById(1)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Default status does not exist"));
-            tasks.setStatus(defaultStatus);
+
+        // Check default status existence and handle errors
+        if (addDTO.getStatus() == null) {
+            try {
+                Status defaultStatus = statusRepository.findById(1)
+                        .orElseThrow(() -> new Exception("Default status does not exist"));
+                tasks.setStatus(defaultStatus);
+            } catch (Exception e) {
+                errors.add(new MultiFieldException.FieldError("status", "Default status does not exist"));
+            }
+        } else {
+            try {
+                Status status = statusRepository.findById(addDTO.getStatus())
+                        .orElseThrow(() -> new Exception("Status with ID " + addDTO.getStatus() + " does not exist"));
+                tasks.setStatus(status);
+            } catch (Exception e) {
+                errors.add(new MultiFieldException.FieldError("status", "Status with ID " + addDTO.getStatus() + " does not exist"));
+            }
         }
-        Status status = statusRepository.findById(addDTO.getStatus())
-                .orElseThrow(() -> new ItemNotFoundException("Status with ID " + addDTO.getStatus() + " does not exist"));
-        tasks.setStatus(status);
+
+        if (tasks.getAssignees() != null && tasks.getAssignees().length() > 30) {
+            errors.add(new MultiFieldException.FieldError("assignees", "Assignees must be between 0 and 30 characters."));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
         try {
             return repository.save(tasks);
         } catch (Exception e) {
-
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save task.", e);
+            throw new CustomFieldException("internal", "Failed to save task: " + e.getMessage());
         }
     }
-
-
     public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
         Tasks existingTask = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));

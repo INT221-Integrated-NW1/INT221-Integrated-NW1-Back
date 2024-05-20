@@ -12,15 +12,18 @@ import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.entities.Status;
 import sit.int221.nw1.entities.Tasks;
 import sit.int221.nw1.exception.ItemNotFoundException;
+import sit.int221.nw1.exception.MultiFieldException;
 import sit.int221.nw1.services.StatusService;
 import sit.int221.nw1.services.TasksService;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
+@CrossOrigin(origins = {"http://localhost:5174", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
 @RequestMapping("/v2/statuses")
 public class StatusController {
     @Autowired
@@ -40,12 +43,19 @@ public class StatusController {
     }
 
     @PostMapping("")
-    public ResponseEntity<Object> CreateStatus(@RequestBody addStatusDTO addStatusDTO) {
+    public ResponseEntity<Object> createStatus(@RequestBody addStatusDTO addStatusDTO) {
         try {
             Status newStatus = statusService.createStatus(addStatusDTO);
             addStatusDTO addnewStatus = modelMapper.map(newStatus, addStatusDTO.class);
-            URI location = URI.create("");
+            URI location = URI.create(""); // You should specify the actual location URI here
             return ResponseEntity.created(location).body(addnewStatus);
+        } catch (MultiFieldException e) {
+            List<MultiFieldException.FieldError> errors = e.getFieldErrors();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+            errorResponse.put("message", "Validation error. Check 'errors' field for details.");
+            errorResponse.put("errors", errors);
+            return ResponseEntity.badRequest().body(errorResponse);
         } catch (Exception e) {
             return new ResponseEntity<>("An error has occurred, the status could not be added.", HttpStatus.INTERNAL_SERVER_ERROR);
         }

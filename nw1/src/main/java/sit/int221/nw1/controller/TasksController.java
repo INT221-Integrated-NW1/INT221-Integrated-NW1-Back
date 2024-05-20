@@ -25,7 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
+@CrossOrigin(origins = {"http://localhost:5174", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping("/v2/tasks")
 public class TasksController {
@@ -108,7 +108,7 @@ public class TasksController {
     public ResponseEntity<Object> deleteTask(@PathVariable Integer id) {
         Tasks deletedTask = service.deleteTask(id);
         deleteTaskDTO delete = modelMapper.map(deletedTask, deleteTaskDTO.class);
-        delete.setStatus(deletedTask.getStatus().getName()); // Add this line
+        delete.setStatus(deletedTask.getStatus().getName());
         return ResponseEntity.ok(delete);
     }
 }
