@@ -3,7 +3,6 @@ package sit.int221.nw1.dto.requestDTO;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import sit.int221.nw1.entities.Status;
 
 @Getter
 @Setter

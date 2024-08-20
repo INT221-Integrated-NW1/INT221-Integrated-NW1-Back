@@ -2,8 +2,7 @@ package sit.int221.nw1.dto.responseDTO;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.minidev.json.annotate.JsonIgnore;
-import sit.int221.nw1.entities.Status;
+import sit.int221.nw1.models.server.Status;
 
 @Getter
 @Setter

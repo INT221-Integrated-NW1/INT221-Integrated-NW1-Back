@@ -1,9 +1,7 @@
 package sit.int221.nw1.services;
 
-import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -11,16 +9,14 @@ import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.Utils.StringUtil;
 import sit.int221.nw1.dto.requestDTO.addDTO;
 import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
-import sit.int221.nw1.entities.Status;
-import sit.int221.nw1.entities.Tasks;
+import sit.int221.nw1.models.server.Status;
+import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.exception.CustomFieldException;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.exception.MultiFieldException;
-import sit.int221.nw1.repositories.StatusRepository;
-import sit.int221.nw1.repositories.TasksRepository;
-import org.springframework.data.annotation.CreatedDate;
+import sit.int221.nw1.repositories.server.StatusRepository;
+import sit.int221.nw1.repositories.server.TasksRepository;
 
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 

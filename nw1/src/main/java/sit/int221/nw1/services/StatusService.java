@@ -10,14 +10,13 @@ import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.Utils.StringUtil;
 import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
-import sit.int221.nw1.entities.Status;
+import sit.int221.nw1.models.server.Status;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.exception.MultiFieldException;
-import sit.int221.nw1.repositories.StatusRepository;
+import sit.int221.nw1.repositories.server.StatusRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class StatusService {

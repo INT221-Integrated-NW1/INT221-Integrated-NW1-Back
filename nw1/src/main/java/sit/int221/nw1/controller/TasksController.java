@@ -2,11 +2,9 @@ package sit.int221.nw1.controller;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import sit.int221.nw1.dto.requestDTO.addDTO;
 //import sit.int221.nw1.dto.requestDTO.deleteDTO;
 import sit.int221.nw1.dto.requestDTO.deleteTaskDTO;
@@ -14,13 +12,11 @@ import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
 import sit.int221.nw1.dto.responseDTO.TaskDTO;
 import sit.int221.nw1.dto.responseDTO.TasksDTO;
 import sit.int221.nw1.dto.responseDTO.addDTORespond;
-import sit.int221.nw1.dto.responseDTO.filteredTaskDTO;
-import sit.int221.nw1.entities.Tasks;
+import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;

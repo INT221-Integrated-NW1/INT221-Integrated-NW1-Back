@@ -4,7 +4,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import sit.int221.nw1.dto.responseDTO.addDTORespond;
-import sit.int221.nw1.entities.Tasks;
+import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.services.ListMapper;
 
 @Configuration
