@@ -10,13 +10,9 @@
         <module name="nw1" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="classicmodels-service" target="17" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="classicmodels-service" options="-parameters" />
       <module name="nw1" options="-parameters" />
     </option>
   </component>
