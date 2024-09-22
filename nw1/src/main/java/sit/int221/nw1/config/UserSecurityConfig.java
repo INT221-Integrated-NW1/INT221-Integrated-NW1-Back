@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import sit.int221.nw1.Filter.JwtAuthFilter;
+import sit.int221.nw1.exception.AuthExceptionHandler;
 import sit.int221.nw1.services.JwtUserDetailsService;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -28,13 +29,16 @@ public class UserSecurityConfig {
     @Autowired
     JwtAuthFilter jwtAuthFilter;
 
+    @Autowired
+    AuthExceptionHandler authExceptionHandler;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
@@ -50,9 +54,11 @@ public class UserSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(
-                        authorize -> authorize.requestMatchers("/**").permitAll()
-                                .anyRequest().authenticated())
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/login").permitAll()  // Allow access to /api/login without authentication
+                        .anyRequest().authenticated())  // All other requests require authentication
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(withDefaults());
         return httpSecurity.build();

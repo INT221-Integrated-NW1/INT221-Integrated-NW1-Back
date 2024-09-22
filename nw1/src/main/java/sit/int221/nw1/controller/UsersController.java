@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
-@RequestMapping("/api")
+@CrossOrigin(origins = {"http://localhost:5173", "http://ip23sy3.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
+@RequestMapping("")
 
 public class UsersController {
     @Autowired
@@ -43,7 +43,7 @@ public class UsersController {
     private ModelMapper modelMapper;
 
     @Autowired
-    private UsersRepository usersRepository;
+    private UsersRepository repository;
 
     @Autowired
     AuthenticationManager authenticationManager;
@@ -56,26 +56,18 @@ public class UsersController {
                 .collect(Collectors.toList());
 
     }
-//    @PostMapping("/login")
-//    public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {
-//        Users users = usersRepository.findByName(jwtRequestDTO.getUserName());
-//        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
-//        Authentication authentication = authenticationManager.authenticate(authenticationToken);
-//        UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
-//        String token = jwtTokenUtil.generateToken(userDetails , users);
-//        JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder().accessToken(token).build();
-//        return ResponseEntity.ok(jwtResponseDTO);
-//    }
+
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {
-        Users users = usersRepository.findByName(jwtRequestDTO.getUserName());
+        Users users = repository.findByName(jwtRequestDTO.getUserName());
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
+
         UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
         String token = jwtTokenUtil.generateToken(userDetails,users);
+
         JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder().accessToken(token).build();
+
         return ResponseEntity.ok(jwtResponseDTO);
     }
 }
-
-

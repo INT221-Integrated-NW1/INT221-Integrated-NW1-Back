@@ -21,23 +21,31 @@ public class JwtTokenUtil implements Serializable {
 
     @Value("#{${jwt.max-token-interval-hour}*60*60*1000}")
     private long JWT_TOKEN_VALIDITY;
-    public String getOid(String token){return getClaimFromToken(token, Claims::getSubject);}
     SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
+
+    public String getOid(String token) {
+        return getAllClaimsFromToken(token).get("oid", String.class);
+    }
+
     public Date getExpirationDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getExpiration);
     }
+
     public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
     }
+
     public Claims getAllClaimsFromToken(String token) {
         Claims claims = Jwts.parser().setSigningKey(SECRET_KEY)
                 .parseClaimsJws(token).getBody();
         return claims;
     }
+
     private Boolean isTokenExpired(String token) {
         final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(new Date());
@@ -47,10 +55,10 @@ public class JwtTokenUtil implements Serializable {
 
         AuthUser authUser = (AuthUser) userDetails;
         Map<String, Object> claims = new HashMap<>();
-        claims.put("iss", "http://intproj23.sit.kmutt.ac.th/nw1/");
+        claims.put("iss", "http://intproj23.sit.kmutt.ac.th/sy3/api");
         claims.put("name", user.getName());
         claims.put("oid", user.getOid());
-        claims.put("email",user.getEmail());
+        claims.put("email", user.getEmail());
         claims.put("role", user.getRole());
         return doGenerateToken(claims, userDetails.getUsername());
     }
@@ -78,8 +86,8 @@ public class JwtTokenUtil implements Serializable {
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
-//        final String username = getUsernameFromToken(token);
-//        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-        return !isTokenExpired(token);
+        final String username = getUsernameFromToken(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
 }
