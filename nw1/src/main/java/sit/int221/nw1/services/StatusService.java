@@ -61,9 +61,7 @@ public class StatusService {
         status.setDescription(StringUtil.trimToNull(status.getDescription()));
     }
     public Status deleteStatus(Integer id) {
-        Status status = repository.findById(id).orElseThrow(
-                () -> new ItemNotFoundException("NOT FOUND"
-                ));
+        Status status = repository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
         repository.deleteById(id);
         return status;
     }

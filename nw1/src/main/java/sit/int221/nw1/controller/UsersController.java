@@ -3,7 +3,6 @@ package sit.int221.nw1.controller;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,7 +19,6 @@ import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.services.JwtUserDetailsService;
 import sit.int221.nw1.services.UsersService;
-import sit.int221.nw1.exception.MultiFieldException;
 
 import java.util.List;
 import java.util.stream.Collectors;

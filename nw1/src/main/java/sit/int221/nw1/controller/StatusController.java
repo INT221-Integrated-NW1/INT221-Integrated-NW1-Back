@@ -92,12 +92,13 @@ public class StatusController {
     public ResponseEntity<StatusDTO> getStatusById(@PathVariable Integer id) {
         Status status = statusService.findById(id);
         if (status != null) {
-            StatusDTO statusDetailDTO = modelMapper.map(status, StatusDTO.class);
+            StatusDTO statusDetailDTO = modelMapper.map(status, StatusDTO.class); // Now uses custom mappings
             return ResponseEntity.ok(statusDetailDTO);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<updateStatusDTO> updateStatus(@RequestBody updateStatusDTO updateDTOStatus, @PathVariable Integer id) {

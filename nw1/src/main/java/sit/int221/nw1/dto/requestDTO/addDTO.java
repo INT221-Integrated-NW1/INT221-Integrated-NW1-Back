@@ -18,4 +18,5 @@ public class addDTO {
     private String assignees;
 
     private Integer status;
+    private String boards;
 }

@@ -33,10 +33,14 @@ public class Tasks {
 
     @ManyToOne
     @JoinColumn(name = "status_id", nullable = false)
-    private Status status;
+    private Statuses status;
+
+    @ManyToOne
+    @JoinColumn(name = "board_id", nullable = false)
+    private Boards boards;
 
     @CreationTimestamp
-    @Column(name = "created_on", nullable = false , insertable = false, updatable = false)
+    @Column(name = "created_on", nullable = false, insertable = false, updatable = false)
     private ZonedDateTime createdOn;
 
     @UpdateTimestamp

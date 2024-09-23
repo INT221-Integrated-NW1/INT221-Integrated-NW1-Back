@@ -13,6 +13,8 @@ public class TasksDTO {
     private String description;
     private String assignees;
     private String status;
+    private String boardName;
     private ZonedDateTime createdOn;
     private ZonedDateTime  updatedOn;
+
 }

@@ -21,9 +21,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th","http://intproj23.sit.kmutt.ac.th"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th", "http://intproj23.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping("/v2/tasks")
+@RequestMapping("/v3/boards")
 public class TasksController {
     @Autowired
     TasksService service;
@@ -31,7 +31,6 @@ public class TasksController {
     ModelMapper modelMapper;
     @Autowired
     ListMapper listMapper;
-
 
 
 //    @GetMapping("")
@@ -49,60 +48,54 @@ public class TasksController {
 
     // get + filter
 // TasksController.java
-    @GetMapping("")
-    public ResponseEntity<Object> getAllTasks(@RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses,
-                                              @RequestParam(defaultValue = "default") String sortBy) {
-        List<Tasks> tasks;
-        if (filterStatuses == null || filterStatuses.isEmpty()) {
-            tasks = service.getAllTasks();
-        } else {
-            tasks = service.getTasksByStatusNames(filterStatuses);
-        }
+    @GetMapping("/{boardId}/tasks")
+    public List<TaskDTO> getAllTasks(@PathVariable String boardId, @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
-        if (sortBy.equalsIgnoreCase("reverse")) {
-            tasks.sort(Comparator.comparing(task -> task.getStatus().getName(), Comparator.reverseOrder()));
-        } else if (sortBy.equalsIgnoreCase("status.name")) {
-            tasks.sort(Comparator.comparing(task -> task.getStatus().getName()));
+//          (filterStatuses == null || filterStatuses.isEmpty()) {
+        return service.getAllTasksByBoardId(boardId, filterStatuses);
+    }
+//        } else {
+//             return service.getTasksByStatusNames(filterStatuses);
+//        }
 
-        } else {
-            tasks.sort(Comparator.comparing(Tasks::getCreatedOn));
 
-        }
+//        if (sortBy.equalsIgnoreCase("reverse")) {
+//            service.sort(Comparator.comparing(task -> task.getStatus().getName(), Comparator.reverseOrder()));
+//        } else if (sortBy.equalsIgnoreCase("status.name")) {
+//            service.sort(Comparator.comparing(task -> task.getStatus().getName()));
+//
+//        } else {
+//            service.sort(Comparator.comparing(Tasks::getCreatedOn));
+//
+//        }
+//
+//        List<TaskDTO> tasksDTO = tasks.stream()
+//                .map(task -> modelMapper.map(task, TaskDTO.class))
+//                .collect(Collectors.toList());
+//        return ResponseEntity.ok(tasksDTO);
 
-        List<TaskDTO> tasksDTO = tasks.stream()
-                .map(task -> modelMapper.map(task, TaskDTO.class))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(tasksDTO);
+
+    @GetMapping("/{boardId}/tasks/{tasksId}")
+    public TasksDTO getTask(@PathVariable String boardId, @PathVariable Integer tasksId) {
+        return service.getTaskByBoardIdAndByTaskID(boardId, tasksId);
     }
 
-
-    @GetMapping("/{id}")
-    public ResponseEntity<TasksDTO> getTaskById(@PathVariable Integer id) {
-        Tasks task = service.findById(id);
-        if (task != null) {
-            TasksDTO tasksDTO = modelMapper.map(task, TasksDTO.class);
-            tasksDTO.setStatus(task.getStatus().getName());
-            return ResponseEntity.ok(tasksDTO);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    @PostMapping("/{boardId}/tasks")
+    public ResponseEntity<addDTORespond> createTask(@RequestBody addDTO addDTO, @PathVariable String boardId) {
+        addDTO.setBoards(boardId);
+        Tasks tasks = service.createTask(addDTO,boardId);
+        addDTORespond addDTORespond = modelMapper.map(tasks, addDTORespond.class);
+        URI location = URI.create("/"+boardId+"/tasks/");
+        return ResponseEntity.created(location).body(addDTORespond);
     }
-
-    @PostMapping("") public ResponseEntity<addDTORespond> createTask(@RequestBody addDTO addDTO) {
-            Tasks tasks = service.createTask(addDTO);
-            addDTORespond addDTORespond = modelMapper.map(tasks, addDTORespond.class);
-            URI location = URI.create("");
-            return ResponseEntity.created(location).body(addDTORespond);
-        }
-
-    @PutMapping("/{id}")
+    @PutMapping("/{boardId}/tasks/{taskId}")
     public ResponseEntity<TaskDTO> updatetask(@RequestBody updateTaskDTO updateTaskDTO, @PathVariable Integer id) {
         return ResponseEntity.ok(modelMapper.map(service.updateTask(id, updateTaskDTO), TaskDTO.class));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteTask(@PathVariable Integer id) {
-        Tasks deletedTask = service.deleteTask(id);
+    @DeleteMapping("/{boardId}/tasks/{tasksId}")
+    public ResponseEntity<deleteTaskDTO> deleteTask(@PathVariable Integer id,@PathVariable String boardId) {
+        Tasks deletedTask = service.deleteTask(id,boardId);
         deleteTaskDTO delete = modelMapper.map(deletedTask, deleteTaskDTO.class);
         delete.setStatus(deletedTask.getStatus().getName());
         return ResponseEntity.ok(delete);

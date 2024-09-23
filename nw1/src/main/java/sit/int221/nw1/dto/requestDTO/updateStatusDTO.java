@@ -13,5 +13,7 @@ public class updateStatusDTO {
     private String name;
     @Size(min =1 , max = 200)
     private String description;
+    private String boards;
+
 
 }
