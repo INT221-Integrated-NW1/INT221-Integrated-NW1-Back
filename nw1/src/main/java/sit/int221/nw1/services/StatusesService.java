@@ -136,7 +136,6 @@ public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, S
 
     List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId, boardId);
 
-    // Reassign tasks only if there are any
     if (!tasksWithThisStatus.isEmpty()) {
         tasksWithThisStatus.forEach(task -> {
             task.setStatus(newStatus);
@@ -148,6 +147,8 @@ public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, S
     statusesRepository.delete(oldStatus);
     return oldStatus;
 }
+
+
 
 
 

@@ -39,13 +39,13 @@ public class BoardsController {
     private JwtTokenUtil jwtTokenUtil;
 
     @GetMapping("/boards")
-    public List<BoardsResponseDTO> getAllBoards(){
+    public List<BoardsResponseDTO> getAllBoards() {
         return boardsService.getAllBoards();
     }
 
     @PostMapping("/boards")
     public ResponseEntity<BoardsAddRequestDTO> addBoards(@Valid @RequestBody BoardsAddRequestDTO boardsAddRequestDTO,
-                                                         @RequestHeader("Authorization") String token ){
+                                                         @RequestHeader("Authorization") String token) {
         String oid = jwtTokenUtil.getOid(token.replace("Bearer ", ""));
         Users user = boardsService.findByOid(oid);
 
@@ -57,6 +57,8 @@ public class BoardsController {
         BoardsAddRequestDTO addRequestDTO = modelMapper.map(createBoard, BoardsAddRequestDTO.class);
 
         createAndAddStatus("No Status", "The default status", generatedBoardId);
+        createAndAddStatus("To do", "To do this task", generatedBoardId);
+        createAndAddStatus("Doing", "Doing this task", generatedBoardId);
         createAndAddStatus("Done", "Finished", generatedBoardId);
 
 

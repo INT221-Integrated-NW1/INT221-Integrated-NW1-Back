@@ -16,5 +16,4 @@ public class updateTaskDTO {
     private String assignees;
     private Integer status;
     private String boards;
-
 }
