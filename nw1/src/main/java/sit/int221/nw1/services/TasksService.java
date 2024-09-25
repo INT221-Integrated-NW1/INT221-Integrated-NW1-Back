@@ -148,22 +148,32 @@ public class TasksService {
 
 
     public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
+        // Check if the id is null
+        if (id == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The task ID must not be null.");
+        }
+
+        // Fetch the existing task by id
         Tasks existingTask = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
-        Boards boards = boardsRepository.findById(updateTaskDTO.getBoards()).orElseThrow(ItemNotFoundException::new);
+
+        // Fetch the board and status
+        Boards board = boardsRepository.findById(updateTaskDTO.getBoards())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
+        Statuses statuses = statusesRepository.findById(updateTaskDTO.getStatus())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
+
+        // Set updated fields
         existingTask.setTitle(updateTaskDTO.getTitle());
         existingTask.setDescription(updateTaskDTO.getDescription());
         existingTask.setAssignees(updateTaskDTO.getAssignees());
-        existingTask.setBoards(boards);
-        Statuses statuses = statusesRepository.findById(updateTaskDTO.getStatus())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Status not found"));
+        existingTask.setBoards(board);
         existingTask.setStatus(statuses);
-        try {
-            return repository.save(existingTask);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update task.", e);
-        }
+
+        // Save the updated task
+        return repository.save(existingTask);
     }
+
 
     private void trim(Tasks tasks) {
         tasks.setTitle(StringUtil.trimToNull(tasks.getTitle()));

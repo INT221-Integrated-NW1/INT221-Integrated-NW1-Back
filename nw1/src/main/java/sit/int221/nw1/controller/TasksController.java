@@ -88,16 +88,22 @@ public class TasksController {
         URI location = URI.create("/"+boardId+"/tasks/");
         return ResponseEntity.created(location).body(addDTORespond);
     }
-    @PutMapping("/{boardId}/tasks/{taskId}")
-    public ResponseEntity<TaskDTO> updatetask(@RequestBody updateTaskDTO updateTaskDTO, @PathVariable Integer id) {
-        return ResponseEntity.ok(modelMapper.map(service.updateTask(id, updateTaskDTO), TaskDTO.class));
+    @PutMapping("/{boardId}/tasks/{tasksId}")
+    public ResponseEntity<TaskDTO> updateTask(
+            @PathVariable("tasksId") Integer id,  // Path variable for the task ID
+            @RequestBody updateTaskDTO updateTaskDTO) {
+        // Pass the task ID from the path to the service
+        Tasks updatedTask = service.updateTask(id, updateTaskDTO);
+        TaskDTO responseDTO = modelMapper.map(updatedTask, TaskDTO.class);
+        return ResponseEntity.ok(responseDTO);
     }
 
-    @DeleteMapping("/{boardId}/tasks/{tasksId}")
-    public ResponseEntity<deleteTaskDTO> deleteTask(@PathVariable Integer id,@PathVariable String boardId) {
-        Tasks deletedTask = service.deleteTask(id,boardId);
+    @DeleteMapping("/{boardId}/tasks/{taskId}")
+    public ResponseEntity<deleteTaskDTO> deleteTask(@PathVariable Integer taskId, @PathVariable String boardId) {
+        Tasks deletedTask = service.deleteTask(taskId, boardId);
         deleteTaskDTO delete = modelMapper.map(deletedTask, deleteTaskDTO.class);
         delete.setStatus(deletedTask.getStatus().getName());
         return ResponseEntity.ok(delete);
     }
+
 }

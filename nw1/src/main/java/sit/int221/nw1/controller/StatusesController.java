@@ -78,7 +78,4 @@ public class StatusesController {
         deleteStatusDTO deletedStatusDTO = modelMapper.map(deletedStatus, deleteStatusDTO.class);
         return ResponseEntity.ok().body(deletedStatusDTO);
     }
-
-
-
 }

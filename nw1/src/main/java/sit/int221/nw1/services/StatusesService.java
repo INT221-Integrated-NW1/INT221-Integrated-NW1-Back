@@ -16,6 +16,8 @@ import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.repositories.server.StatusesRepository;
 import sit.int221.nw1.repositories.server.TasksRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
 import java.util.List;
@@ -34,6 +36,7 @@ public class StatusesService {
 
     @Autowired
     private ModelMapper modelMapper;
+    private static final Logger logger = LoggerFactory.getLogger(StatusesService.class);
 
 
     public List<StatusDTO> getAllStatusesByBoardId(String boardsId) {
@@ -91,31 +94,62 @@ public class StatusesService {
         statusesRepository.delete(status);
         return status;
     }
+//    public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
+//        if (statusId.equals(newStatusId)) {
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
+//        }
+//
+//        Statuses oldStatus = statusesRepository.findByIdAndBoardsBoardId(statusId,boardId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source status not found"));
+//
+//        Statuses newStatus = statusesRepository.findByIdAndBoardsBoardId(newStatusId,boardId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination status not found"));
+//        logger.info("Old Status: ID = {}, Name = {}", oldStatus.getId(), oldStatus.getName());
+//        logger.info("New Status: ID = {}, Name = {}", newStatus.getId(), newStatus.getName());
+//
+//
+//        List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId,boardId);
+//
+//        if (tasksWithThisStatus.isEmpty()) {
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination status not found");
+//        }
+//        tasksWithThisStatus.forEach(task -> {
+//            task.setStatus(newStatus);
+//            tasksRepository.save(task);
+//        });
+//
+//        statusesRepository.delete(oldStatus);
+//        return oldStatus;
+//    }
+public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
+    if (statusId.equals(newStatusId)) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
+    }
 
-    public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
-        if (statusId.equals(newStatusId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
-        }
+    Statuses oldStatus = statusesRepository.findByIdAndBoardsBoardId(statusId, boardId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source status not found"));
 
-        Statuses oldStatus = statusesRepository.findByIdAndBoardsBoardId(statusId,boardId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source status not found"));
+    Statuses newStatus = statusesRepository.findByIdAndBoardsBoardId(newStatusId, boardId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination status not found"));
 
-        Statuses newStatus = statusesRepository.findByIdAndBoardsBoardId(newStatusId,boardId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination status not found"));
+    logger.info("Reassigning tasks from status {} to {}", oldStatus.getName(), newStatus.getName());
 
-        List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId,boardId);
+    List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId, boardId);
 
-        if (tasksWithThisStatus.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination status not found");
-        }
+    // Reassign tasks only if there are any
+    if (!tasksWithThisStatus.isEmpty()) {
         tasksWithThisStatus.forEach(task -> {
             task.setStatus(newStatus);
             tasksRepository.save(task);
         });
-
-        statusesRepository.delete(oldStatus);
-        return oldStatus;
     }
+
+    // Now delete the old status
+    statusesRepository.delete(oldStatus);
+    return oldStatus;
+}
+
+
 
     private void trimAndValidateStatusFields(Statuses status, String name, String description) {
         if (name == null || name.trim().isEmpty()) {

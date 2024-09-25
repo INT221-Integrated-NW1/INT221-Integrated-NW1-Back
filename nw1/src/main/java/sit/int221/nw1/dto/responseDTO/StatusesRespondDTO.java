@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StatusesRespondDTO {
-    private Integer statusId;
+    private Integer id;
     private String name;
     private String description;
     private String boards;
