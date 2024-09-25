@@ -90,13 +90,14 @@ public class TasksController {
     }
     @PutMapping("/{boardId}/tasks/{tasksId}")
     public ResponseEntity<TaskDTO> updateTask(
-            @PathVariable("tasksId") Integer id,  // Path variable for the task ID
+            @PathVariable("boardId") String boardId, // ดึง boardId จาก path variable
+            @PathVariable("tasksId") Integer id,      // ดึง taskId จาก path variable
             @RequestBody updateTaskDTO updateTaskDTO) {
-        // Pass the task ID from the path to the service
-        Tasks updatedTask = service.updateTask(id, updateTaskDTO);
+        Tasks updatedTask = service.updateTask(id, boardId, updateTaskDTO); // ส่ง boardId ไปยัง service
         TaskDTO responseDTO = modelMapper.map(updatedTask, TaskDTO.class);
         return ResponseEntity.ok(responseDTO);
     }
+
 
     @DeleteMapping("/{boardId}/tasks/{taskId}")
     public ResponseEntity<deleteTaskDTO> deleteTask(@PathVariable Integer taskId, @PathVariable String boardId) {

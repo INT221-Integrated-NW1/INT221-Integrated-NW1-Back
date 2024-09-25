@@ -147,30 +147,32 @@ public class TasksService {
 //eiei
 
 
-    public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
-        // Check if the id is null
+    public Tasks updateTask(Integer id, String boardId, updateTaskDTO updateTaskDTO) {
+        // ตรวจสอบว่า id ไม่เป็น null
         if (id == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The task ID must not be null.");
         }
 
-        // Fetch the existing task by id
+        // ดึง Task ที่มีอยู่ตาม id
         Tasks existingTask = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
 
-        // Fetch the board and status
-        Boards board = boardsRepository.findById(updateTaskDTO.getBoards())
+        // ดึง Board จาก boardId ที่ส่งผ่าน path variable
+        Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
+
+        // ดึง Status จาก updateTaskDTO
         Statuses statuses = statusesRepository.findById(updateTaskDTO.getStatus())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
 
-        // Set updated fields
+        // อัปเดตฟิลด์ต่าง ๆ
         existingTask.setTitle(updateTaskDTO.getTitle());
         existingTask.setDescription(updateTaskDTO.getDescription());
         existingTask.setAssignees(updateTaskDTO.getAssignees());
         existingTask.setBoards(board);
         existingTask.setStatus(statuses);
 
-        // Save the updated task
+        // บันทึก Task ที่อัปเดตแล้ว
         return repository.save(existingTask);
     }
 
