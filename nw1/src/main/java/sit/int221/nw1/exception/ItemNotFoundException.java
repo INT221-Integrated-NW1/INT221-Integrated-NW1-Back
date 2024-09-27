@@ -4,10 +4,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 public class ItemNotFoundException extends RuntimeException {
-    public synchronized Throwable fillInStackThis() {
-        return this;
+    public ItemNotFoundException(String message) {
+        super(message);
     }
 }
+
 
 
 

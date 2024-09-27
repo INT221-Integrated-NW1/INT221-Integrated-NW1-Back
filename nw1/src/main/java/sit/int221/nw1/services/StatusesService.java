@@ -40,13 +40,13 @@ public class StatusesService {
 
 
     public List<StatusDTO> getAllStatusesByBoardId(String boardsId) {
-        Boards boards =  boardsRepository.findById(boardsId).orElseThrow(ItemNotFoundException::new);
+        Boards boards =  boardsRepository.findById(boardsId).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
         return boards.getStatuses().stream().sorted(Comparator.comparing(Statuses::getId)).map(status ->
                 modelMapper.map(status, StatusDTO.class)
         ).collect(Collectors.toList());
     }
     public StatusesRespondDTO getStatusesByBoard_idAndByStatusID(String boardsId, Integer statusId) {
-        Statuses statuses =  statusesRepository.findByIdAndBoardsBoardId(statusId,boardsId).orElseThrow(ItemNotFoundException::new);
+        Statuses statuses =  statusesRepository.findByIdAndBoardsBoardId(statusId,boardsId).orElseThrow(() -> new ItemNotFoundException("Status not found"));
 
         StatusesRespondDTO statusesRespondDTO = modelMapper.map(statuses, StatusesRespondDTO.class);
         return statusesRespondDTO;
@@ -58,7 +58,7 @@ public class StatusesService {
         Statuses status = modelMapper.map(addStatusDTO, Statuses.class);
         trimAndValidateStatusFields(status, addStatusDTO.getName(), addStatusDTO.getDescription());
 
-        Boards boards = boardsRepository.findById(addStatusDTO.getBoards()).orElseThrow(ItemNotFoundException::new);
+        Boards boards = boardsRepository.findById(addStatusDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
         status.setBoards(boards);
         return statusesRepository.save(status);
     }
@@ -73,7 +73,7 @@ public class StatusesService {
         if ("No Status".equals(statuses.getName()) || "Done".equals(statuses.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot modify this status");
         }
-        Boards boards = boardsRepository.findById(updateStatusDTO.getBoards()).orElseThrow(ItemNotFoundException::new);
+        Boards boards = boardsRepository.findById(updateStatusDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
         status.setName(updateStatusDTO.getName());
         status.setDescription(updateStatusDTO.getDescription());
         status.setBoards(boards);

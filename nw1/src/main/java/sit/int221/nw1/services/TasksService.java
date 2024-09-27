@@ -136,7 +136,7 @@ public class TasksService {
 //            tasks.setStatus(statusesRepository.findByStatusIdAndBoardsBoardId(addDTO.getStatus(),boardsId)
 //                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status Not Found")));
             // Fetch the board by ID
-            Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(ItemNotFoundException::new);
+            Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
             tasks.setBoards(boards);
             // Save the task to the repository
             return tasksRepository.save(tasks);
