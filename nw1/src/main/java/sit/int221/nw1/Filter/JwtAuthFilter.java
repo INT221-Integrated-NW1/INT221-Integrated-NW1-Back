@@ -53,41 +53,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String token = header.substring(7);
                 String oid = jwtTokenUtil.getOid(token);
 
-                // Log the OID for debugging
-                logger.info("Extracted OID from JWT: {}", oid);
-
                 if (oid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // Fetch user by OID and proceed with authentication
-                    Users user = repository.findByOid(oid);
+                    String username = repository.findByOid(oid).getUsername();
+                    UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
 
-                    // Log when user is found
-                    if (user != null) {
-                        logger.info("User with OID {} found: {}", oid, user.getUsername());
-                        String username = user.getUsername();
-                        UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
-
-                        if (jwtTokenUtil.validateToken(token, userDetails)) {
-                            UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                            SecurityContextHolder.getContext().setAuthentication(authentication);
-                        }
-                    } else {
-                        logger.error("No user found with OID: {}", oid);
-                        request.setAttribute("error", "Invalid OID in the token");
+                    if (jwtTokenUtil.validateToken(token, userDetails)) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 }
 
-            } catch (ExpiredJwtException ex) {
-                logger.warn("JWT token has expired", ex);
+            } catch (io.jsonwebtoken.ExpiredJwtException ex) {
                 request.setAttribute("error", "Token Expired");
-            } catch (MalformedJwtException ex) {
-                logger.warn("Malformed JWT token", ex);
+            } catch (io.jsonwebtoken.MalformedJwtException ex) {
                 request.setAttribute("error", "Token is not well-formed JWT");
-            } catch (SignatureException ex) {
-                logger.warn("JWT signature does not match", ex);
+            } catch (io.jsonwebtoken.SignatureException ex) {
                 request.setAttribute("error", "Token has been tampered with");
             } catch (Exception ex) {
-                logger.error("Authentication error", ex);
                 request.setAttribute("error", "Access is Denied");
             }
         }

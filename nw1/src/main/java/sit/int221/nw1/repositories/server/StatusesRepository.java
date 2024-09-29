@@ -5,10 +5,8 @@ import sit.int221.nw1.models.server.Statuses;
 
 import java.util.Optional;
 
-public interface StatusesRepository extends JpaRepository<Statuses, Integer> {
-    Statuses findByName(String name);
-
-    Optional<Statuses> findByIdAndBoardsBoardId(Integer Id , String boardId);
-
-
+public interface StatusesRepository extends JpaRepository<Statuses, String> {
+    boolean existsByName(String name);
+    Optional<Statuses> findByName(String name);
+    Optional<Statuses> findStatusesById(String Id);
 }

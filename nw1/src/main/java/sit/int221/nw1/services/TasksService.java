@@ -8,11 +8,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.Utils.StringUtil;
 import sit.int221.nw1.dto.requestDTO.addDTO;
 import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
 import sit.int221.nw1.dto.responseDTO.TaskDTO;
+import sit.int221.nw1.dto.responseDTO.TaskResponse;
 import sit.int221.nw1.dto.responseDTO.TasksDTO;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Status;
@@ -33,35 +35,33 @@ import java.util.stream.Collectors;
 
 @Service
 public class TasksService {
-    private static final Logger logger = LoggerFactory.getLogger(TasksService.class);
-    @Autowired
-    ModelMapper modelMapper;
-    @Autowired
-    private TasksRepository repository;
-    @Autowired
-    private StatusesRepository statusesRepository;
+
     @Autowired
     private TasksRepository tasksRepository;
+
+    @Autowired
+    private StatusesRepository statusesRepository;
+
     @Autowired
     private BoardsRepository boardsRepository;
+    @Autowired
+    private ModelMapper modelMapper;
 
-    //==============GetMethod GetAlltasks==================//
-    // public List<Tasks> getAllTasks() {
-    //     return repository.findAll();
-    // }
-
+    public List<Tasks> getAllTask() {
+        return tasksRepository.findAll();
+    }
     public List<TaskDTO> getAllTasksByBoardId(String boardId, List<String> filterStatuses) {
-        logger.info("Fetching tasks for boardId: {}, filterStatuses: {}", boardId, filterStatuses);
 
         // Determine the sort order
 
         List<Tasks> tasks = tasksRepository.findByBoardsBoardId(boardId);
 
+
         // If filterStatuses is empty, return all tasks
         if (filterStatuses == null || filterStatuses.isEmpty()) {
             return tasks.stream().map(task -> {
                 TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-                taskDTO.setBoardName(task.getBoards().getBoard_name()); // Set board name
+                taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
 
                 return taskDTO;
             }).collect(Collectors.toList());
@@ -74,23 +74,69 @@ public class TasksService {
 
         return filteredTasks.stream().map(task -> {
             TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-            taskDTO.setBoardName(task.getBoards().getBoard_name()); // Set board name
+            taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
 
             return taskDTO;
         }).collect(Collectors.toList());
     }
 
 
-    public TasksDTO getTaskByBoardIdAndByTaskID(String boardId, Integer tasksId) {
-        Tasks task = tasksRepository.findByIdAndBoardsBoardId(tasksId, boardId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+    public TasksDTO findTasksById(Integer tasksId) {
+        Tasks task = tasksRepository.findTasksById(tasksId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task ID " + tasksId+ " Not Found"));
 
-        TasksDTO tasksDTO = modelMapper.map(task, TasksDTO.class);
+//        TasksDTO tasksDTO = mapper.map(task, TasksDTO.class);
+        TasksDTO tasksDTO = new TasksDTO();
+        tasksDTO.setId(task.getId());
+        tasksDTO.setTitle(task.getTitle());
+        tasksDTO.setDescription(task.getDescription());
+        tasksDTO.setAssignees(task.getAssignees());
         tasksDTO.setStatus(task.getStatus().getName());
-        tasksDTO.setBoardName(task.getBoards().getBoard_name());
+        tasksDTO.setBoardName(task.getBoards().getBoardName());
+        tasksDTO.setCreatedOn(task.getCreatedOn());
+        tasksDTO.setUpdatedOn(task.getUpdatedOn());
 
         return tasksDTO;
     }
 
+    public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
+        // Find the existing task
+        Tasks existingTask = tasksRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
+
+        // Set values from DTO
+        existingTask.setTitle(updateTaskDTO.getTitle());
+        existingTask.setDescription(updateTaskDTO.getDescription());
+        existingTask.setAssignees(updateTaskDTO.getAssignees());
+
+        // Trim values
+        trim(existingTask);
+
+        // Validate the task
+        List<MultiFieldException.FieldError> errors = (List<MultiFieldException.FieldError>) updateTaskDTO;
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
+        try {
+            Statuses status = statusesRepository.findById(updateTaskDTO.getStatus())
+                    .orElseThrow(() -> new Exception("Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
+            existingTask.setStatus(status);
+        } catch (Exception e) {
+            errors.add(new MultiFieldException.FieldError("status", "Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
+        try {
+            return tasksRepository.save(existingTask);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update task.", e);
+        }
+    }
     public Tasks createTask(addDTO addDTO, String boardsId) {
         Tasks tasks = modelMapper.map(addDTO, Tasks.class);
 
@@ -105,7 +151,7 @@ public class TasksService {
         if (addDTO.getStatus() == null) {
             try {
                 // Fetch the default status (ID = 1) from the Statuses repository
-                Statuses defaultStatus = statusesRepository.findById(1)
+                Statuses defaultStatus = statusesRepository.findById("000000000000001")
                         .orElseThrow(() -> new Exception("Default status does not exist"));
                 tasks.setStatus(defaultStatus);
             } catch (Exception e) {
@@ -114,7 +160,7 @@ public class TasksService {
         } else {
             try {
                 // Fetch the status based on the ID provided in the DTO
-                Statuses status = statusesRepository.findByIdAndBoardsBoardId(addDTO.getStatus(),boardsId)
+                Statuses status = statusesRepository.findStatusesById(addDTO.getStatus())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status Not Found"));
                 tasks.setStatus(status);
             } catch (Exception e) {
@@ -136,44 +182,13 @@ public class TasksService {
 //            tasks.setStatus(statusesRepository.findByStatusIdAndBoardsBoardId(addDTO.getStatus(),boardsId)
 //                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status Not Found")));
             // Fetch the board by ID
-            Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
+            Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Board not found"));
             tasks.setBoards(boards);
             // Save the task to the repository
             return tasksRepository.save(tasks);
         } catch (Exception e) {
             throw new CustomFieldException("internal", "Failed to save task: " + e.getMessage());
         }
-    }
-//eiei
-
-
-    public Tasks updateTask(Integer id, String boardId, updateTaskDTO updateTaskDTO) {
-        // ตรวจสอบว่า id ไม่เป็น null
-        if (id == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The task ID must not be null.");
-        }
-
-        // ดึง Task ที่มีอยู่ตาม id
-        Tasks existingTask = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
-
-        // ดึง Board จาก boardId ที่ส่งผ่าน path variable
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
-
-        // ดึง Status จาก updateTaskDTO
-        Statuses statuses = statusesRepository.findById(updateTaskDTO.getStatus())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
-
-        // อัปเดตฟิลด์ต่าง ๆ
-        existingTask.setTitle(updateTaskDTO.getTitle());
-        existingTask.setDescription(updateTaskDTO.getDescription());
-        existingTask.setAssignees(updateTaskDTO.getAssignees());
-        existingTask.setBoards(board);
-        existingTask.setStatus(statuses);
-
-        // บันทึก Task ที่อัปเดตแล้ว
-        return repository.save(existingTask);
     }
 
 
@@ -186,13 +201,13 @@ public class TasksService {
 
     // task(id) does not exist, e.g. has already been deleted by another user returns 404 from TaskNotFoundException class
     public Tasks deleteTask(Integer id,String boardId) {
-        Tasks task = repository.findByIdAndBoardsBoardId(id,boardId).orElseThrow(
+        Tasks task = tasksRepository.findByIdAndBoardsBoardId(id,boardId).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
-        repository.delete(task);
+        tasksRepository.delete(task);
         return task;
     }
 
-    public void transferTasks(Integer oldStatusId, Integer newStatusId) {
+    public void transferTasks(String oldStatusId, String newStatusId) {
         Statuses oldStatus = statusesRepository.findById(oldStatusId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Old Status does not exist"));
         Statuses newStatus = statusesRepository.findById(newStatusId)
@@ -204,12 +219,17 @@ public class TasksService {
             tasksRepository.save(task);
         }
     }
-
-    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
-        return repository.findByStatusNameIn(statusNames);
+    @Transactional(transactionManager = "serverTransactionManager")
+    public TaskResponse deleteTasks(Integer id) {
+        Tasks tasks = tasksRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("NOT FOUND"));
+        tasksRepository.delete(tasks);
+        return modelMapper.map(tasks, TaskResponse.class);
     }
-}
 
+//    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
+//        return repository.findByStatusNameIn(statusNames);
+//    }
+}
 
 
 

@@ -4,12 +4,14 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusesRespondDTO;
 import sit.int221.nw1.exception.ItemNotFoundException;
+import sit.int221.nw1.exception.MultiFieldException;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
 import sit.int221.nw1.models.server.Tasks;
@@ -19,6 +21,7 @@ import sit.int221.nw1.repositories.server.TasksRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,62 +42,129 @@ public class StatusesService {
     private static final Logger logger = LoggerFactory.getLogger(StatusesService.class);
 
 
-    public List<StatusDTO> getAllStatusesByBoardId(String boardsId) {
-        Boards boards =  boardsRepository.findById(boardsId).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
-        return boards.getStatuses().stream().sorted(Comparator.comparing(Statuses::getId)).map(status ->
-                modelMapper.map(status, StatusDTO.class)
-        ).collect(Collectors.toList());
-    }
-    public StatusesRespondDTO getStatusesByBoard_idAndByStatusID(String boardsId, Integer statusId) {
-        Statuses statuses =  statusesRepository.findByIdAndBoardsBoardId(statusId,boardsId).orElseThrow(() -> new ItemNotFoundException("Status not found"));
-
-        StatusesRespondDTO statusesRespondDTO = modelMapper.map(statuses, StatusesRespondDTO.class);
-        return statusesRespondDTO;
+    public List<Statuses> getAllStatus() {
+        return statusesRepository.findAll();
     }
 
-    public Statuses createNewStatus(addStatusDTO addStatusDTO) {
-//        checkStatusNameExists(statusAddRequestDTO.getName());
-
-        Statuses status = modelMapper.map(addStatusDTO, Statuses.class);
-        trimAndValidateStatusFields(status, addStatusDTO.getName(), addStatusDTO.getDescription());
-
-        Boards boards = boardsRepository.findById(addStatusDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
-        status.setBoards(boards);
-        return statusesRepository.save(status);
+    public Statuses getStatusById(String Id) {
+        return statusesRepository.findStatusesById(Id).orElseThrow(() -> new ItemNotFoundException("NOT FOUND"));
     }
 
-    public Statuses updateStatus(updateStatusDTO updateStatusDTO , Integer statusId) {
-//        checkStatusNameExists(statusUpdateRequestDTO.getName());
-        Statuses status = modelMapper.map(updateStatusDTO, Statuses.class);
-        trimAndValidateStatusFields(status, updateStatusDTO.getName(), updateStatusDTO.getDescription());
+    public Statuses createStatus(Statuses status) {
+        List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        Statuses statuses = statusesRepository.findById(statusId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
-
-        if ("No Status".equals(statuses.getName()) || "Done".equals(statuses.getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot modify this status");
+        // Validate REQUIRED statusName
+        if (status.getName() == null || status.getName().isEmpty()) {
+            errors.add(new MultiFieldException.FieldError("name", "must not be null"));
         }
-        Boards boards = boardsRepository.findById(updateStatusDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Boards not found"));
-        status.setName(updateStatusDTO.getName());
-        status.setDescription(updateStatusDTO.getDescription());
-        status.setBoards(boards);
 
-        return statusesRepository.save(status);
+        // Validate non-UNIQUE statusName
+        if (statusesRepository.existsByName(status.getName())) {
+            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+        }
+        if (status.getName() == null || status.getName().length() > 50) {
+            errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));
+        }
+        if (status.getDescription() != null && status.getDescription().length() > 200) {
+            errors.add(new MultiFieldException.FieldError("description", "size must be between 0 and 200"));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
+//        trim(status);
+
+        try {
+            return statusesRepository.save(status);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to insert new status.", e);
+        }
+    }
+
+    public Statuses updateStatus(String id, Statuses status) {
+        // Find the existing status
+        Statuses existingStatus = statusesRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status with ID " + id + " not found"));
+
+        List<MultiFieldException.FieldError> errors = new ArrayList<>();
+
+        // Cannot Edit or Delete "No Status" and "Done"
+//        if (isNoStatus(existingStatus.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "The status name 'No Status' cannot be changed"));
+//        }
+//        if (isDone(existingStatus.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "The status name 'Done' cannot be changed"));
+//        }
+
+        // Validate REQUIRED statusName
+        if (status.getName() == null || status.getName().isEmpty()) {
+            errors.add(new MultiFieldException.FieldError("name", "must not be null."));
+        }
+        // Validate non-UNIQUE statusName
+        if (!existingStatus.getName().equals(status.getName()) && statusesRepository.existsByName(status.getName())) {
+            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+        }
+
+        if (status.getName() == null || status.getName().length() > 50) {
+            errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));
+        }
+        if (status.getDescription() != null && status.getDescription().length() > 200) {
+            errors.add(new MultiFieldException.FieldError("description", "size must be between 0 and 200"));
+        }
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
+        // Set the existing status with new values
+        existingStatus.setName(status.getName());
+        existingStatus.setDescription(status.getDescription());
+
+        try {
+            // Save the updated status
+            return statusesRepository.save(existingStatus);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update status.", e);
+        }
     }
 
 
-    public Statuses deleteStatus(Integer statusId, String boardId) {
-        Statuses status = statusesRepository.findByIdAndBoardsBoardId(statusId , boardId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status not found"));
-        if ("No Status".equals(status.getName()) || "Done".equals(status.getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete this status");
+    @Transactional(transactionManager = "serverTransactionManager")
+    public Statuses deleteStatus(String id) {
+        // Find the existing status
+        Statuses status = statusesRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status with ID " + id + " not found"));
+
+        List<MultiFieldException.FieldError> errors = new ArrayList<>();
+
+        // Cannot delete "No Status" and "Done"
+//        if (isNoStatus(status.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "The status 'No Status' cannot be deleted"));
+//        }
+//        if (isDone(status.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "The status 'Done' cannot be deleted"));
+//        }
+
+        // Check if the status is referenced by other entities
+        // For example, check if there are tasks associated with this status
+        if (!status.getTasks().isEmpty()) {
+            errors.add(new MultiFieldException.FieldError("status", "Cannot delete status with ID " + id + " because it is referenced by other entities."));
         }
-        if (!tasksRepository.findByStatus_IdAndBoards_BoardId(statusId ,boardId ).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete status with associated tasks");
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
         }
-        statusesRepository.delete(status);
-        return status;
+
+        try {
+            // Delete the status
+            statusesRepository.deleteById(id);
+            return status;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete status.", e);
+        }
     }
-//    public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
+
+    //    public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
 //        if (statusId.equals(newStatusId)) {
 //            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
 //        }
@@ -121,35 +191,35 @@ public class StatusesService {
 //        statusesRepository.delete(oldStatus);
 //        return oldStatus;
 //    }
-public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
-    if (statusId.equals(newStatusId)) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
-    }
+    @Transactional(transactionManager = "serverTransactionManager")
+    public void transferAndDeleteStatus(String oldStatusId, String newStatusId) {
+        // ดึงสถานะเดิมที่ต้องการลบ
+        Statuses oldStatus = statusesRepository.findById(oldStatusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "the specified status for task transfer does not exist"));
 
-    Statuses oldStatus = statusesRepository.findByIdAndBoardsBoardId(statusId, boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source status not found"));
+        // ดึงสถานะใหม่ที่ต้องการโอนไป
+        Statuses newStatus = statusesRepository.findById(newStatusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "the specified status for task transfer does not exist"));
 
-    Statuses newStatus = statusesRepository.findByIdAndBoardsBoardId(newStatusId, boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination status not found"));
 
-    logger.info("Reassigning tasks from status {} to {}", oldStatus.getName(), newStatus.getName());
+        if (newStatus.getId() == oldStatus.getId()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "destination status for task transfer must be different from current status");
+        }
 
-    List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId, boardId);
+        // ดึงงานที่มีสถานะเดิม
+        List<Tasks> tasksToUpdate = tasksRepository.findByStatus(oldStatus);
 
-    if (!tasksWithThisStatus.isEmpty()) {
-        tasksWithThisStatus.forEach(task -> {
+        // โอนงานไปยังสถานะใหม่
+        for (Tasks task : tasksToUpdate) {
             task.setStatus(newStatus);
-            tasksRepository.save(task);
-        });
+        }
+
+        // บันทึกการเปลี่ยนแปลง
+        tasksRepository.saveAll(tasksToUpdate);
+
+        // ลบสถานะเดิม
+        statusesRepository.delete(oldStatus);
     }
-
-    // Now delete the old status
-    statusesRepository.delete(oldStatus);
-    return oldStatus;
-}
-
-
-
 
 
     private void trimAndValidateStatusFields(Statuses status, String name, String description) {
@@ -159,10 +229,10 @@ public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, S
         if (description != null && description.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status description cannot be empty!");
         }
-        if (description != null){
+        if (description != null) {
             status.setDescription(description.trim());
 
-        }else {
+        } else {
             status.setName(name.trim());
         }
     }

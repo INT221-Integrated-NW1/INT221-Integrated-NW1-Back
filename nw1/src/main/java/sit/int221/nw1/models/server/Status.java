@@ -1,7 +1,11 @@
 package sit.int221.nw1.models.server;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,7 +26,15 @@ public class Status {
     @Column(name = "status_description")
     private String description;
 
-    @ManyToOne
-    @JoinColumn(name = "board_id") // เชื่อมกับ Board
-    private Boards board;
+    @OneToMany(mappedBy = "status", fetch = FetchType.EAGER)
+    @JsonIgnore
+    private List<Tasks> tasks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "status")
+    @JsonIgnore
+    private List<BoardStatus> boardStatuses;
+
+    public int getNoOfTasks() {
+        return tasks.size();
+    }
 }

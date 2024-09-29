@@ -1,17 +1,19 @@
 package sit.int221.nw1.dto.responseDTO;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import sit.int221.nw1.models.server.Status;
 import sit.int221.nw1.models.server.Statuses;
 
 @Getter
 @Setter
-public class TaskDTO {
-   private Integer id;
+@NoArgsConstructor
+@AllArgsConstructor
+public class TaskResponse {
+    private Integer id;
     private String title;
     private String assignees;
-    private String status;
-    private String boardName;
-
+    private Statuses status;
 }
+

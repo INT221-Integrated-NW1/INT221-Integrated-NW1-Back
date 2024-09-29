@@ -55,7 +55,7 @@ public class JwtTokenUtil implements Serializable {
 
         AuthUser authUser = (AuthUser) userDetails;
         Map<String, Object> claims = new HashMap<>();
-        claims.put("iss", "http://intproj23.sit.kmutt.ac.th/sy3/api");
+        claims.put("iss", "http://intproj23.sit.kmutt.ac.th/nw1/api");
         claims.put("name", user.getName());
         claims.put("oid", user.getOid());
         claims.put("email", user.getEmail());
