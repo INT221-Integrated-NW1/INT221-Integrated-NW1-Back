@@ -3,6 +3,7 @@ package sit.int221.nw1.models.server;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,15 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Data
 @Getter
 @Setter
 @Table(name = "status")
 public class Statuses {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "status_id")
-    private String id  ;  // Ensure this field exists
+    private String id ;
 
     @Size(min=1, max=50)
     @Column(name = "status_name")
@@ -35,7 +36,7 @@ public class Statuses {
     @JsonIgnore
     private List<Tasks> tasks = new ArrayList<>();
 
-    @OneToMany(mappedBy = "status")
+    @OneToMany(mappedBy = "status" ,fetch = FetchType.EAGER)
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 

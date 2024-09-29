@@ -71,6 +71,7 @@ public class StatusesController {
         Statuses status = new Statuses();
         status.setName(addStatusDTO.getName());
         status.setDescription(addStatusDTO.getDescription());
+
         Statuses newStatus = statusesService.createStatus(status);
         boardStatusService.createBoardStatus(board, newStatus);
         return new ResponseEntity<>(newStatus, HttpStatus.CREATED);

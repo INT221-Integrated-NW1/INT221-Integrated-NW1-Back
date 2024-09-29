@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusDTO;
@@ -39,6 +40,8 @@ public class StatusesService {
 
     @Autowired
     private ModelMapper modelMapper;
+    @Autowired
+    private NanoUtil nanoUtil;
     private static final Logger logger = LoggerFactory.getLogger(StatusesService.class);
 
 
@@ -73,8 +76,8 @@ public class StatusesService {
             throw new MultiFieldException(errors);
         }
 
-//        trim(status);
-
+        String statusId = nanoUtil.nanoIdGenerate(15);
+        status.setId(statusId);;
         try {
             return statusesRepository.save(status);
         } catch (Exception e) {

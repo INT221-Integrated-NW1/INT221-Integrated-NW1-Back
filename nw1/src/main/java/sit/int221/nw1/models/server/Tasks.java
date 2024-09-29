@@ -10,7 +10,6 @@ import java.time.ZonedDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
 @Getter
 @Setter
 @Entity
@@ -40,7 +39,7 @@ public class Tasks {
     private Boards boards;
 
     @CreationTimestamp
-    @Column(name = "created_on", nullable = false, insertable = false, updatable = false)
+    @Column(name = "created_on", nullable = false , insertable = false, updatable = false)
     private ZonedDateTime createdOn;
 
     @UpdateTimestamp

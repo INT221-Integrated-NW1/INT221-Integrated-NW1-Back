@@ -44,6 +44,7 @@ public class TasksService {
 
     @Autowired
     private BoardsRepository boardsRepository;
+
     @Autowired
     private ModelMapper modelMapper;
 
@@ -62,7 +63,7 @@ public class TasksService {
             return tasks.stream().map(task -> {
                 TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
                 taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
-
+                taskDTO.setStatus(task.getStatus().getName());
                 return taskDTO;
             }).collect(Collectors.toList());
         }
@@ -75,7 +76,7 @@ public class TasksService {
         return filteredTasks.stream().map(task -> {
             TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
             taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
-
+            taskDTO.setStatus(task.getStatus().getName());
             return taskDTO;
         }).collect(Collectors.toList());
     }
@@ -113,7 +114,7 @@ public class TasksService {
         trim(existingTask);
 
         // Validate the task
-        List<MultiFieldException.FieldError> errors = (List<MultiFieldException.FieldError>) updateTaskDTO;
+        List<MultiFieldException.FieldError> errors = validateTaskForUpdate(updateTaskDTO);
 
         if (!errors.isEmpty()) {
             throw new MultiFieldException(errors);
@@ -225,7 +226,34 @@ public class TasksService {
         tasksRepository.delete(tasks);
         return modelMapper.map(tasks, TaskResponse.class);
     }
+    private List<MultiFieldException.FieldError> validateTaskForUpdate(updateTaskDTO updateTaskDTO) {
+        List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
+        // Validate title
+        if (updateTaskDTO.getTitle() == null || updateTaskDTO.getTitle().isEmpty()) {
+            errors.add(new MultiFieldException.FieldError("title", "must not be null"));
+        }
+        if (updateTaskDTO.getTitle() != null && updateTaskDTO.getTitle().length() > 100) {
+            errors.add(new MultiFieldException.FieldError("title", "size must be between 0 and 100"));
+        }
+
+        // Validate description
+        if (updateTaskDTO.getDescription() != null && updateTaskDTO.getDescription().length() > 500) {
+            errors.add(new MultiFieldException.FieldError("description", "size must be between 0 and 500"));
+        }
+
+        // Validate assignees
+        if (updateTaskDTO.getAssignees() != null && updateTaskDTO.getAssignees().length() > 30) {
+            errors.add(new MultiFieldException.FieldError("assignees", "size must be between 0 and 30"));
+        }
+
+        // Validate status
+        if (updateTaskDTO.getStatus() == null) {
+            errors.add(new MultiFieldException.FieldError("status", "Status is required."));
+        }
+
+        return errors;
+    }
 //    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
 //        return repository.findByStatusNameIn(statusNames);
 //    }
