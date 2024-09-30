@@ -2,6 +2,7 @@ package sit.int221.nw1.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -30,6 +31,12 @@ public class CustomGlobalExceptionHandler {
 //
 //        return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
 //    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", request.getDescription(false));
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(

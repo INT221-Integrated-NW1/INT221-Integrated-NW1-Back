@@ -43,7 +43,9 @@ public class BoardsService {
         return boardsRepository.save(board);
     }
 
-
+    public Boards findBoardById(String id) {
+        return boardsRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("Board not found"));
+    }
 
     public Users findByOid(String oid) {
         Users user = usersRepository.findByOid(oid);

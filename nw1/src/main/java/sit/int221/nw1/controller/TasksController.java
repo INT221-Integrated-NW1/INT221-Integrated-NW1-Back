@@ -100,7 +100,7 @@ public class TasksController {
         String userOid = jwtTokenUtil.getOid(token);
 
         Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
         if (!board.getUser().getOid().equals(userOid)) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to add tasks to this board.", null);

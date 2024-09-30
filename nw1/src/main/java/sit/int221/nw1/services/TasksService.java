@@ -84,7 +84,7 @@ public class TasksService {
 
     public TasksDTO findTasksById(Integer tasksId) {
         Tasks task = tasksRepository.findTasksById(tasksId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task ID " + tasksId+ " Not Found"));
+                .orElseThrow(() -> new ItemNotFoundException("Task ID " + tasksId+ " Not Found"));
 
 //        TasksDTO tasksDTO = mapper.map(task, TasksDTO.class);
         TasksDTO tasksDTO = new TasksDTO();

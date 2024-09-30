@@ -75,13 +75,12 @@ public class BoardsController {
         return ResponseEntity.ok(boards);
     }
     @GetMapping("/{id}")
-    public ResponseEntity<Object> getBoardById(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken) {
+    public ResponseEntity<Object> getBoardById(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken, @PathVariable String id) {
         String token = rawToken.substring(7);
-        String oid = jwtTokenUtil.getOid(token);
-        List<Boards> boards = boardService.findBoardByOid(oid);
-        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(boards.get(0).getBoardId(), boards.get(0).getBoardName());
+        Boards boards = boardService.findBoardById(id);
+        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(boards.getBoardId(), boards.getBoardName());
 
-        return ResponseEntity.ok(boardsResponseDTO);
+        return ResponseEntity.ok(returnBoardDTO);
     }
 
     @PostMapping("")

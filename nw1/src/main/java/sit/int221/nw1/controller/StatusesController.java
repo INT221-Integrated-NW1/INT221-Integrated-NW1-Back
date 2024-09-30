@@ -12,6 +12,7 @@ import sit.int221.nw1.dto.requestDTO.deleteStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusesRespondDTO;
+import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
@@ -48,7 +49,7 @@ public class StatusesController {
 
     @GetMapping("")
     public ResponseEntity<Object> getAllStatus(@PathVariable String boardId) {
-        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ItemNotFoundException("Board not found"));
         List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId);
         List<Statuses> statuses = new ArrayList<>();
         for (BoardStatus bs : boardStatuses) {
@@ -79,7 +80,7 @@ public class StatusesController {
 
     @PutMapping("/{id}")
     public ResponseEntity<updateStatusDTO> updateStatus(@PathVariable String boardId, @PathVariable String id, @RequestBody updateStatusDTO updateDTO) {
-        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ItemNotFoundException("Board not found"));
         Statuses status = modelMapper.map(updateDTO, Statuses.class);
         statusesService.updateStatus(id, status);
 
