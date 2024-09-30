@@ -17,6 +17,7 @@ import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.responseDTO.BoardNameResponseDTO;
 import sit.int221.nw1.dto.responseDTO.BoardsResponseDTO;
 import sit.int221.nw1.dto.responseDTO.OwnerDTO;
+import sit.int221.nw1.dto.responseDTO.UserResponseDTO;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.models.server.BoardStatus;
@@ -34,6 +35,7 @@ import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -72,21 +74,36 @@ public class BoardsController {
         String oid = jwtTokenUtil.getOid(token);
         List<Boards> boards = boardService.findBoardByOid(oid);
 
-        return ResponseEntity.ok(boards);
+        // Convert each board into BoardsResponseDTO including User information
+        List<BoardsResponseDTO> responseDTOs = boards.stream()
+                .map(board -> new BoardsResponseDTO(
+                        board.getBoardId(),
+                        board.getBoardName(),
+                        new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responseDTOs);
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<Object> getBoardById(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken, @PathVariable String id) {
         String token = rawToken.substring(7);
-        Boards boards = boardService.findBoardById(id);
-        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(boards.getBoardId(), boards.getBoardName());
+        Boards board = boardService.findBoardById(id);
+
+        // Map board to DTO including user information
+        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+                board.getBoardId(),
+                board.getBoardName(),
+                new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
+        );
 
         return ResponseEntity.ok(returnBoardDTO);
     }
-
     @PostMapping("")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
-            @Valid @RequestBody BoardNameResponseDTO boardName // Use @Valid here
+            @Valid @RequestBody BoardNameResponseDTO boardName
     ) {
         String token = rawToken.substring(7);
         String oid = jwtTokenUtil.getOid(token);
@@ -101,9 +118,9 @@ public class BoardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
 
+        // Find or create the user
         Optional<User> userOptional = userRepository.findById(oid);
         User user;
-
         if (userOptional.isPresent()) {
             user = userOptional.get();
         } else {
@@ -113,15 +130,22 @@ public class BoardsController {
             userRepository.save(user);
         }
 
+        // Create the board and associate the user
         Boards board = new Boards(boardId, boardName.getName(), user);
         List<BoardStatus> boardStatuses = boardStatusService.createDefaultBoardStatus(board);
         board.setBoardStatuses(boardStatuses);
+
+        // Save the created board
         Boards createdBoard = boardService.createBoard(board);
-        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(board.getBoardId(), createdBoard.getBoardName());
         boardStatusService.SaveDefaultBoardStatus(boardStatuses);
+
+        // Return board details including the user information
+        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+                createdBoard.getBoardId(),
+                createdBoard.getBoardName(),
+                new UserResponseDTO(user.getOid(), user.getName())
+        );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(returnBoardDTO);
     }
-
-
 }
