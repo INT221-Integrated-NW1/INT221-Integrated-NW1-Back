@@ -13,12 +13,15 @@ import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.config.AuthUser;
 import sit.int221.nw1.config.JwtTokenUtil;
 import sit.int221.nw1.dto.requestDTO.BoardsAddRequestDTO;
+import sit.int221.nw1.dto.requestDTO.UpdateVisibilityRequest;
 import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.responseDTO.BoardNameResponseDTO;
 import sit.int221.nw1.dto.responseDTO.BoardsResponseDTO;
 import sit.int221.nw1.dto.responseDTO.OwnerDTO;
 import sit.int221.nw1.dto.responseDTO.UserResponseDTO;
+import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
+import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
@@ -38,9 +41,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 
+// BoardsController.java
 @RestController
 @CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw3.sit.kmutt.ac.th:3333", "http://intproj23.sit.kmutt.ac.th"})
-
 @RequestMapping("/v3/boards")
 public class BoardsController {
 
@@ -62,23 +65,35 @@ public class BoardsController {
     @Autowired
     private BoardStatusService boardStatusService;
 
-//    @GetMapping("")
-//    public List<BoardsResponseDTO> getAllBoards() {
-//        return boardsService.getAllBoards();
-//    }
-
-
+    // GET /v3/boards - Get all boards accessible by the user
     @GetMapping("")
-    public ResponseEntity<Object> getAllBoards(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken) {
-        String token = rawToken.substring(7);
-        String oid = jwtTokenUtil.getOid(token);
-        List<Boards> boards = boardService.findBoardByOid(oid);
+    public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
+        String oid = null;
+        if (rawToken != null && rawToken.startsWith("Bearer ")) {
+            String token = rawToken.substring(7);
+            try {
+                oid = jwtTokenUtil.getOid(token);
+            } catch (Exception e) {
+                // Invalid token, proceed to fetch only public boards
+                oid = null;
+            }
+        }
+
+        List<Boards> boards;
+        if (oid != null) {
+            // Fetch both public boards and user's private boards
+            boards = boardService.findAccessibleBoards(oid);
+        } else {
+            // Fetch only public boards
+            boards = boardService.findPublicBoards();
+        }
 
         // Convert each board into BoardsResponseDTO including User information
         List<BoardsResponseDTO> responseDTOs = boards.stream()
                 .map(board -> new BoardsResponseDTO(
                         board.getBoardId(),
                         board.getBoardName(),
+                        board.getVisibility(),
                         new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
                 ))
                 .collect(Collectors.toList());
@@ -86,27 +101,56 @@ public class BoardsController {
         return ResponseEntity.ok(responseDTOs);
     }
 
+    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
     @GetMapping("/{id}")
-    public ResponseEntity<Object> getBoardById(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken, @PathVariable String id) {
-        String token = rawToken.substring(7);
-        Boards board = boardService.findBoardById(id);
+    public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
+                                               @PathVariable String id) {
+        String oid = null;
+        if (rawToken != null && rawToken.startsWith("Bearer ")) {
+            String token = rawToken.substring(7);
+            try {
+                oid = jwtTokenUtil.getOid(token);
+            } catch (Exception e) {
+                // Invalid token, proceed as unauthenticated
+                oid = null;
+            }
+        }
 
-        // Map board to DTO including user information
-        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
-                board.getBoardId(),
-                board.getBoardName(),
-                new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
-        );
+        try {
+            Boards board = boardService.findBoardByIdWithVisibilityCheck(id, oid);
 
-        return ResponseEntity.ok(returnBoardDTO);
+            BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+                    board.getBoardId(),
+                    board.getBoardName(),
+                    board.getVisibility(),
+                    new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
+            );
+
+            return ResponseEntity.ok(returnBoardDTO);
+        } catch (ItemNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Board not found");
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied to this board");
+        }
     }
+
+    // POST /v3/boards - Create a new board with default visibility as PRIVATE
     @PostMapping("")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @Valid @RequestBody BoardNameResponseDTO boardName
     ) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing token");
+        }
+
         String token = rawToken.substring(7);
-        String oid = jwtTokenUtil.getOid(token);
+        String oid;
+        try {
+            oid = jwtTokenUtil.getOid(token);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
 
         String boardId = nanoUtil.nanoIdGenerate(10);
         if (boardId.length() > 10) {
@@ -130,8 +174,8 @@ public class BoardsController {
             userRepository.save(user);
         }
 
-        // Create the board and associate the user
-        Boards board = new Boards(boardId, boardName.getName(), user);
+        // Create the board with default visibility as PRIVATE
+        Boards board = new Boards(boardId, boardName.getName(), "PRIVATE", user);
         List<BoardStatus> boardStatuses = boardStatusService.createDefaultBoardStatus(board);
         board.setBoardStatuses(boardStatuses);
 
@@ -139,13 +183,51 @@ public class BoardsController {
         Boards createdBoard = boardService.createBoard(board);
         boardStatusService.SaveDefaultBoardStatus(boardStatuses);
 
-        // Return board details including the user information
+        // Return board details including the user information and visibility
         BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
                 createdBoard.getBoardId(),
                 createdBoard.getBoardName(),
+                createdBoard.getVisibility(),
                 new UserResponseDTO(user.getOid(), user.getName())
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(returnBoardDTO);
+    }
+
+    // PATCH /v3/boards/{id}/visibility - Update board visibility
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<Object> updateBoardVisibility(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String id,
+            @Valid @RequestBody UpdateVisibilityRequest request
+    ) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing token");
+        }
+
+        String token = rawToken.substring(7);
+        String oid;
+        try {
+            oid = jwtTokenUtil.getOid(token);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
+
+        try {
+            Boards updatedBoard = boardService.updateBoardVisibility(id, request.getVisibility(), oid);
+            BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+                    updatedBoard.getBoardId(),
+                    updatedBoard.getBoardName(),
+                    updatedBoard.getVisibility(),
+                    new UserResponseDTO(updatedBoard.getUser().getOid(), updatedBoard.getUser().getName())
+            );
+            return ResponseEntity.ok(returnBoardDTO);
+        } catch (ItemNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Board not found");
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only the board owner can change visibility");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid visibility value");
+        }
     }
 }

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+// Boards.java
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -24,8 +25,11 @@ public class Boards {
 
     @NotBlank(message = "boardName cannot be null or empty.")
     @Size(max = 120, message = "boardName length exceeds the maximum limit of 120.")
-    @Column(name = "board_name", nullable = false, length = 10)
+    @Column(name = "board_name", nullable = false, length = 120) // Updated length to 120
     private String boardName;
+
+    @Column(name = "visibility", nullable = false, length = 10)
+    private String visibility = "PRIVATE";  // Default value is PRIVATE
 
     @ManyToOne
     @JoinColumn(name = "oid", nullable = false)
@@ -39,16 +43,28 @@ public class Boards {
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 
-    public Boards(String boardId, String name, User user, List<BoardStatus> boardStatuses ) {
+    // Constructor with boardId, name, visibility, and user
+    public Boards(String boardId, String name, String visibility, User user) {
+        this.boardId = boardId;
+        this.boardName = name;
+        this.visibility = visibility;
+        this.user = user;
+    }
+
+    // Constructor without visibility (default to PRIVATE)
+    public Boards(String boardId, String name, User user) {
+        this.boardId = boardId;
+        this.boardName = name;
+        this.user = user;
+        this.visibility = "PRIVATE";
+    }
+
+    // Constructor with boardId, name, user, and boardStatuses
+    public Boards(String boardId, String name, User user, List<BoardStatus> boardStatuses) {
         this.boardId = boardId;
         this.boardName = name;
         this.user = user;
         this.boardStatuses = boardStatuses;
     }
-
-    public Boards(String boardId, String name, User user ) {
-        this.boardId = boardId;
-        this.boardName = name;
-        this.user = user;
-    }
 }
+

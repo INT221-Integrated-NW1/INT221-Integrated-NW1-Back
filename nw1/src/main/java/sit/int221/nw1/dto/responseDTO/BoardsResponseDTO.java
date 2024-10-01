@@ -10,11 +10,11 @@ import sit.int221.nw1.models.server.User;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BoardsResponseDTO {
-    private String BoardId;
-    private String BoardName;
-    private UserResponseDTO user; // Include the user information
+    private String boardId;
+    private String boardName;
+    private String visibility;
+    private UserResponseDTO user;
 
-
-}
+    }
 
 

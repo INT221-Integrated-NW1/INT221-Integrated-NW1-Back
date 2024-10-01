@@ -2,15 +2,16 @@ package sit.int221.nw1.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
 import sit.int221.nw1.repositories.server.BoardStatusRepository;
-import sit.int221.nw1.repositories.server.StatusesRepository;
 
 import java.util.ArrayList;
 import java.util.List;
 
+// BoardStatusService.java
 @Service
 public class BoardStatusService {
     @Autowired
@@ -19,6 +20,7 @@ public class BoardStatusService {
     @Autowired
     private StatusesService statusesService;
 
+    // Method to create default BoardStatus for a new Board
     public List<BoardStatus> createDefaultBoardStatus(Boards board) {
         List<BoardStatus> boardStatuses = new ArrayList<>();
 
@@ -41,20 +43,30 @@ public class BoardStatusService {
         return boardStatuses;
     }
 
+    // Method to create a new BoardStatus
     public BoardStatus createBoardStatus(Boards board, Statuses status) {
         BoardStatus bs = new BoardStatus(board, status);
         boardStatusRepository.save(bs);
         return bs;
     }
 
+    // Save default BoardStatus for a new Board
     public void SaveDefaultBoardStatus(List<BoardStatus> boardStatuses) {
         boardStatusRepository.saveAll(boardStatuses);
     }
 
+    // Get all statuses for a specific Board by boardId with visibility check
     public List<BoardStatus> getAllStatusByBoardId(String boardId) {
-        List<BoardStatus> bs = boardStatusRepository.findBoardStatusesByBoards_BoardId(boardId);
-        return bs;
-    }
+        // Use the repository method to get the board
+        Boards board = boardStatusRepository.findBoardById(boardId);
 
+        // Check if the board is public or the user is the owner
+        if (board.getVisibility().equals("PUBLIC")) {
+            return boardStatusRepository.findBoardStatusesByBoards_BoardId(boardId);
+        }
+
+        // If the board is private and the user is not the owner, throw an exception
+        throw new AccessDeniedException("Access denied to board statuses");
+    }
 
 }
