@@ -92,30 +92,30 @@ public class BoardsController {
         return ResponseEntity.ok(responseDTOs);
     }
 
-    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
+
     @GetMapping("/{id}")
     public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
                                                @PathVariable String id) {
         String oid = null;
-        // ตรวจสอบว่ามี Token อยู่หรือไม่ และ Token ต้องเริ่มต้นด้วย "Bearer "
+
         if (rawToken != null && rawToken.startsWith("Bearer ")) {
             String token = rawToken.substring(7);
             try {
                 oid = jwtTokenUtil.getOid(token);
             } catch (Exception e) {
-                // ถ้า Token ไม่ถูกต้อง ให้ตั้งค่า oid เป็น null เพื่อจัดการต่อไป
+
                 oid = null;
             }
         } else {
-            // ถ้าไม่มี Token หรือ Token ไม่ครบ ให้คืนค่า 403 Forbidden
+
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Token is missing or incomplete.");
         }
 
         try {
-            // เรียกการค้นหาบอร์ดและตรวจสอบสิทธิ์ของผู้ใช้
+
             Boards board = boardService.findBoardByIdWithVisibilityCheck(id, oid);
 
-            // สร้าง DTO เพื่อส่งกลับข้อมูลบอร์ด
+
             BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
                     board.getBoardId(),
                     board.getBoardName(),

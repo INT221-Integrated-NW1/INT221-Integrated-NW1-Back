@@ -3,6 +3,7 @@ package sit.int221.nw1.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -55,10 +56,11 @@ public class UserSecurityConfig {
         httpSecurity.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login").permitAll()  // Allow access to /api/login without authentication
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()  // Allow all GET requests without authentication
+                        .requestMatchers("/login").permitAll()  // Allow access to /login without authentication
                         .anyRequest().authenticated())  // All other requests require authentication
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance
+                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance for auth error handling
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(withDefaults());
         return httpSecurity.build();
