@@ -71,7 +71,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (io.jsonwebtoken.SignatureException ex) {
                 request.setAttribute("error", "Token has been tampered with");
             } catch (Exception ex) {
-                request.setAttribute("error", "Access is Denied");
+                request.setAttribute    ("error", "Access is Denied");
             }
         }
         filterChain.doFilter(request, response);

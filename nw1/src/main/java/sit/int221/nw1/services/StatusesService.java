@@ -136,20 +136,10 @@ public class StatusesService {
     public Statuses deleteStatus(String id) {
         // Find the existing status
         Statuses status = statusesRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status with ID " + id + " not found"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with ID " + id + " not found"));
 
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        // Cannot delete "No Status" and "Done"
-//        if (isNoStatus(status.getName())) {
-//            errors.add(new MultiFieldException.FieldError("name", "The status 'No Status' cannot be deleted"));
-//        }
-//        if (isDone(status.getName())) {
-//            errors.add(new MultiFieldException.FieldError("name", "The status 'Done' cannot be deleted"));
-//        }
-
-        // Check if the status is referenced by other entities
-        // For example, check if there are tasks associated with this status
         if (!status.getTasks().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("status", "Cannot delete status with ID " + id + " because it is referenced by other entities."));
         }
@@ -167,33 +157,6 @@ public class StatusesService {
         }
     }
 
-    //    public Statuses reassignAndDeleteStatus(Integer statusId, Integer newStatusId, String boardId) {
-//        if (statusId.equals(newStatusId)) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source and destination statuses cannot be the same");
-//        }
-//
-//        Statuses oldStatus = statusesRepository.findByIdAndBoardsBoardId(statusId,boardId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source status not found"));
-//
-//        Statuses newStatus = statusesRepository.findByIdAndBoardsBoardId(newStatusId,boardId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination status not found"));
-//        logger.info("Old Status: ID = {}, Name = {}", oldStatus.getId(), oldStatus.getName());
-//        logger.info("New Status: ID = {}, Name = {}", newStatus.getId(), newStatus.getName());
-//
-//
-//        List<Tasks> tasksWithThisStatus = tasksRepository.findByStatus_IdAndBoards_BoardId(statusId,boardId);
-//
-//        if (tasksWithThisStatus.isEmpty()) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination status not found");
-//        }
-//        tasksWithThisStatus.forEach(task -> {
-//            task.setStatus(newStatus);
-//            tasksRepository.save(task);
-//        });
-//
-//        statusesRepository.delete(oldStatus);
-//        return oldStatus;
-//    }
     @Transactional(transactionManager = "serverTransactionManager")
     public void transferAndDeleteStatus(String oldStatusId, String newStatusId) {
         // ดึงสถานะเดิมที่ต้องการลบ

@@ -4,9 +4,11 @@ import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sit.int221.nw1.config.JwtTokenUtil;
 import sit.int221.nw1.dto.requestDTO.addStatusDTO;
 import sit.int221.nw1.dto.requestDTO.deleteStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
@@ -45,19 +47,33 @@ public class StatusesController {
     BoardsService boardsService;
     @Autowired
     BoardsRepository boardsRepository;
+    @Autowired
+    JwtTokenUtil jwtTokenUtil;
 
 
     @GetMapping("")
-    public ResponseEntity<Object> getAllStatus(@PathVariable String boardId) {
-        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ItemNotFoundException("Board not found"));
-        List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId);
+    public ResponseEntity<Object> getAllStatus(@RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken, @PathVariable String boardId) {
+
+        String token = rawToken.substring(7);
+        String userId = jwtTokenUtil.getOid(token);  // Assuming jwtTokenUtil.getOid(token) extracts the userId
+
+        // Find the board by ID
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // Get all statuses associated with the board, passing the boardId and userId to the service method
+        List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId, userId);
+
+        // Collect statuses from the board statuses
         List<Statuses> statuses = new ArrayList<>();
         for (BoardStatus bs : boardStatuses) {
             Statuses status = statusesService.getStatusById(bs.getStatus().getId());
             statuses.add(status);
         }
+        // Return the list of statuses
         return ResponseEntity.ok(statuses);
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity getStatusById(@PathVariable String id) {

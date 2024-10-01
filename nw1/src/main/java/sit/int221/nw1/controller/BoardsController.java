@@ -2,7 +2,6 @@ package sit.int221.nw1.controller;
 
 
 import jakarta.validation.Valid;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -12,30 +11,22 @@ import org.springframework.web.bind.annotation.*;
 import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.config.AuthUser;
 import sit.int221.nw1.config.JwtTokenUtil;
-import sit.int221.nw1.dto.requestDTO.BoardsAddRequestDTO;
 import sit.int221.nw1.dto.requestDTO.UpdateVisibilityRequest;
-import sit.int221.nw1.dto.requestDTO.addStatusDTO;
-import sit.int221.nw1.dto.responseDTO.BoardNameResponseDTO;
+import sit.int221.nw1.dto.responseDTO.BoardNameRequestDTO;
 import sit.int221.nw1.dto.responseDTO.BoardsResponseDTO;
-import sit.int221.nw1.dto.responseDTO.OwnerDTO;
 import sit.int221.nw1.dto.responseDTO.UserResponseDTO;
 import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
-import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
-import sit.int221.nw1.models.server.Statuses;
 import sit.int221.nw1.models.server.User;
-import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.repositories.server.UserRepository;
 import sit.int221.nw1.services.BoardStatusService;
 import sit.int221.nw1.services.BoardsService;
 import sit.int221.nw1.services.StatusesService;
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 
 
-import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -106,19 +97,25 @@ public class BoardsController {
     public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
                                                @PathVariable String id) {
         String oid = null;
+        // ตรวจสอบว่ามี Token อยู่หรือไม่ และ Token ต้องเริ่มต้นด้วย "Bearer "
         if (rawToken != null && rawToken.startsWith("Bearer ")) {
             String token = rawToken.substring(7);
             try {
                 oid = jwtTokenUtil.getOid(token);
             } catch (Exception e) {
-                // Invalid token, proceed as unauthenticated
+                // ถ้า Token ไม่ถูกต้อง ให้ตั้งค่า oid เป็น null เพื่อจัดการต่อไป
                 oid = null;
             }
+        } else {
+            // ถ้าไม่มี Token หรือ Token ไม่ครบ ให้คืนค่า 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Token is missing or incomplete.");
         }
 
         try {
+            // เรียกการค้นหาบอร์ดและตรวจสอบสิทธิ์ของผู้ใช้
             Boards board = boardService.findBoardByIdWithVisibilityCheck(id, oid);
 
+            // สร้าง DTO เพื่อส่งกลับข้อมูลบอร์ด
             BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
                     board.getBoardId(),
                     board.getBoardName(),
@@ -138,7 +135,7 @@ public class BoardsController {
     @PostMapping("")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
-            @Valid @RequestBody BoardNameResponseDTO boardName
+            @Valid @RequestBody BoardNameRequestDTO boardName
     ) {
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing token");
@@ -195,7 +192,7 @@ public class BoardsController {
     }
 
     // PATCH /v3/boards/{id}/visibility - Update board visibility
-    @PatchMapping("/{id}/visibility")
+    @PatchMapping("/{id}")
     public ResponseEntity<Object> updateBoardVisibility(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String id,

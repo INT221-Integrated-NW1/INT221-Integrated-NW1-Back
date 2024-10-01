@@ -9,6 +9,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class BoardNameResponseDTO {
+public class BoardNameRequestDTO {
     private String name;
 }

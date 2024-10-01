@@ -56,17 +56,18 @@ public class BoardStatusService {
     }
 
     // Get all statuses for a specific Board by boardId with visibility check
-    public List<BoardStatus> getAllStatusByBoardId(String boardId) {
+    public List<BoardStatus> getAllStatusByBoardId(String boardId, String userId) {
         // Use the repository method to get the board
         Boards board = boardStatusRepository.findBoardById(boardId);
 
         // Check if the board is public or the user is the owner
-        if (board.getVisibility().equals("PUBLIC")) {
+        if (board.getVisibility().equals("PUBLIC") || board.getUser().getOid().equals(userId)) {
             return boardStatusRepository.findBoardStatusesByBoards_BoardId(boardId);
         }
 
         // If the board is private and the user is not the owner, throw an exception
         throw new AccessDeniedException("Access denied to board statuses");
     }
+
 
 }
