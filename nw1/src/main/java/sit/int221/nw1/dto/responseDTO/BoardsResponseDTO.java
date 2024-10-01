@@ -11,7 +11,7 @@ import sit.int221.nw1.models.server.User;
 @NoArgsConstructor
 public class BoardsResponseDTO {
     private String id;
-    private String boardName;
+    private String name;
     private String visibility;
     private UserResponseDTO user;
 
