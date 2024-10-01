@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 // BoardsController.java
 @RestController
 @CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw3.sit.kmutt.ac.th:3333", "http://intproj23.sit.kmutt.ac.th"})
-@RequestMapping("/v3/boards")
+@RequestMapping("/v3")
 public class BoardsController {
 
     @Autowired
@@ -57,7 +57,7 @@ public class BoardsController {
     private BoardStatusService boardStatusService;
 
     // GET /v3/boards - Get all boards accessible by the user
-    @GetMapping("")
+    @GetMapping("/boards")
     public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
         String oid = null;
         if (rawToken != null && rawToken.startsWith("Bearer ")) {
@@ -93,7 +93,7 @@ public class BoardsController {
     }
 
     // GET /v3/boards/{id} - Get a specific board by ID with visibility check
-    @GetMapping("/{id}")
+    @GetMapping("/boards/{id}")
     public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
                                                @PathVariable String id) {
         String oid = null;
@@ -132,7 +132,7 @@ public class BoardsController {
     }
 
     // POST /v3/boards - Create a new board with default visibility as PRIVATE
-    @PostMapping("")
+    @PostMapping("/boards")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @Valid @RequestBody BoardNameRequestDTO boardName
@@ -192,7 +192,7 @@ public class BoardsController {
     }
 
     // PATCH /v3/boards/{id}/visibility - Update board visibility
-    @PatchMapping("/{id}")
+    @PatchMapping("/boards/{id}")
     public ResponseEntity<Object> updateBoardVisibility(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String id,

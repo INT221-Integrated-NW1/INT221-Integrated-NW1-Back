@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = {"http://localhost:5173", "http://ip23nw1.sit.kmutt.ac.th", "http://intproj23.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping("/v3/boards/{boardId}/tasks")
+@RequestMapping("/v3")
 public class TasksController {
     @Autowired
     TasksService tasksService;
@@ -47,13 +47,19 @@ public class TasksController {
 
 
 
- @GetMapping("")
+    @GetMapping("/boards/{boardId}/tasks")
     public ResponseEntity<Object> getAllTasks(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
             @PathVariable String boardId,
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
-        String token = rawToken.substring(7);
+        // ตรวจสอบว่ามีการส่ง Authorization header หรือไม่
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+
+        String token = rawToken.substring(7); // ตัดคำว่า "Bearer " ออก
         String userOid = jwtTokenUtil.getOid(token);
 
         Boards board = boardsRepository.findById(boardId)
@@ -68,13 +74,16 @@ public class TasksController {
         return ResponseEntity.ok(tasks);
     }
 
-   @GetMapping("/{taskId}")
+   @GetMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> getTasksById(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
             @PathVariable String boardId,
             @PathVariable Integer taskId,
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
-
+       if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+           ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
+           return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+       }
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
@@ -90,7 +99,7 @@ public class TasksController {
         return ResponseEntity.ok(tasks);
     }
 
-    @PostMapping("")
+    @PostMapping("/boards/{boardId}/tasks")
     public ResponseEntity<Object> createTask(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @RequestBody addDTO addDTO,
@@ -114,7 +123,7 @@ public class TasksController {
         return ResponseEntity.created(location).body(addDTORespond);
     }
 
-        @PutMapping("/{taskId}")
+        @PutMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> updateTask(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String boardId,
@@ -145,7 +154,7 @@ public class TasksController {
     //     TaskDTO responseDTO = modelMapper.map(updatedTask, TaskDTO.class);
     //     return ResponseEntity.ok(responseDTO);
     // }
-@DeleteMapping("/{taskId}")
+@DeleteMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> deleteTasks(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String boardId,

@@ -3,6 +3,7 @@ package sit.int221.nw1.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -50,17 +51,37 @@ public class UserSecurityConfig {
         return authenticationProvider;
     }
 
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login").permitAll()  // Allow access to /api/login without authentication
-                        .anyRequest().authenticated())  // All other requests require authentication
+                        .requestMatchers(HttpMethod.GET,
+                                "/v3/boards","/v3/boards/{id}",
+                                "/v3/boards/{boardId}/tasks","/v3/boards/{boardId}/tasks/{taskId}",
+                                "/v3/boards/{boardId}/statuses","/v3/boards/{boardId}/statuses/{id}").permitAll()  // อนุญาตให้เข้าถึงเฉพาะ GET requests สำหรับเส้นทางที่กำหนด
+                        .requestMatchers("/login").permitAll()  // อนุญาตให้เข้าถึง /login ได้โดยไม่ต้องมีการตรวจสอบสิทธิ์
+                        .anyRequest().authenticated())  // การร้องขออื่นๆ ต้องมีการตรวจสอบสิทธิ์
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance
+                        .authenticationEntryPoint(authExceptionHandler))  // ใช้ authExceptionHandler เมื่อมีข้อผิดพลาดเกี่ยวกับการตรวจสอบสิทธิ์
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(withDefaults());
         return httpSecurity.build();
     }
+
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+//        httpSecurity.csrf(csrf -> csrf.disable())
+//                .cors(Customizer.withDefaults())
+//                .authorizeHttpRequests(authorize -> authorize
+//                        .requestMatchers("/login","/v3/boards").permitAll()
+//                        // Allow access to /api/login without authentication
+//                        .anyRequest().authenticated())  // All other requests require authentication
+//                .exceptionHandling(exceptionHandling -> exceptionHandling
+//                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance
+//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+//                .httpBasic(withDefaults());
+//        return httpSecurity.build();
+//    }
 }
