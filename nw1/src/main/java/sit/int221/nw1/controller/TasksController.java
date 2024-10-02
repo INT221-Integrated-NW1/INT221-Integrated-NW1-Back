@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.dto.requestDTO.addDTO;
 //import sit.int221.nw1.dto.requestDTO.deleteDTO;
 import sit.int221.nw1.dto.requestDTO.deleteTaskDTO;
@@ -16,6 +17,7 @@ import sit.int221.nw1.dto.responseDTO.TaskDTO;
 import sit.int221.nw1.dto.responseDTO.TaskResponse;
 import sit.int221.nw1.dto.responseDTO.TasksDTO;
 import sit.int221.nw1.dto.responseDTO.addDTORespond;
+import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.Tasks;
@@ -102,8 +104,16 @@ public class TasksController {
     @PostMapping("/boards/{boardId}/tasks")
     public ResponseEntity<Object> createTask(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
-            @RequestBody addDTO addDTO,
+            @RequestBody(required = false) addDTO addDTO,
             @PathVariable String boardId) {
+
+        isUserAuthorizedForBoard(rawToken, boardId);
+
+
+        if (addDTO == null) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
 
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
@@ -111,9 +121,10 @@ public class TasksController {
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
+        // ตรวจสอบว่า Oid ของผู้ใช้ตรงกับ Oid ของเจ้าของ Board หรือไม่
         if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to add tasks to this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            // โยน ResponseStatusException แทนการสร้าง ErrorResponse ตรงนี้
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add tasks to this board.");
         }
 
         addDTO.setBoards(boardId);
@@ -123,37 +134,40 @@ public class TasksController {
         return ResponseEntity.created(location).body(addDTORespond);
     }
 
-        @PutMapping("/boards/{boardId}/tasks/{taskId}")
+
+    @PutMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> updateTask(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String boardId,
             @PathVariable Integer taskId,
-            @RequestBody updateTaskDTO updateTaskDTO) {
+            @RequestBody(required = false) updateTaskDTO updateTaskDTO) {
+
+        isUserAuthorizedForBoard(rawToken, boardId);
 
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
-
+        if (updateTaskDTO == null) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
         if (!board.getUser().getOid().equals(userOid)) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to edit tasks from this board.", null);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
+        if(taskId == null || tasksService.findTasksById(taskId) == null){
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Task ID is required.", null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+
         updateTaskDTO.setId(taskId);
         Tasks updatedTask = tasksService.updateTask(taskId, updateTaskDTO);
         addDTORespond addDTORespond = modelMapper.map(updatedTask, addDTORespond.class);
         return ResponseEntity.ok(addDTORespond);
     }
-    // @PutMapping("/{tasksId}")
-    // public ResponseEntity<TaskDTO> updateTask(
-    //         @PathVariable("boardId") String boardId, // ดึง boardId จาก path variable
-    //         @PathVariable("tasksId") Integer id,      // ดึง taskId จาก path variable
-    //         @RequestBody updateTaskDTO updateTaskDTO) {
-    //     Tasks updatedTask = service.updateTask(id, boardId, updateTaskDTO); // ส่ง boardId ไปยัง service
-    //     TaskDTO responseDTO = modelMapper.map(updatedTask, TaskDTO.class);
-    //     return ResponseEntity.ok(responseDTO);
-    // }
+
 @DeleteMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> deleteTasks(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
@@ -167,6 +181,7 @@ public class TasksController {
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
 
         if (!board.getUser().getOid().equals(userOid)) {
+            System.out.println("KUYYYYYYYYYYYYY");
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to remove tasks from this board.", null);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
@@ -182,5 +197,21 @@ public class TasksController {
     //     delete.setStatus(deletedTask.getStatus().getName());
     //     return ResponseEntity.ok(delete);
     // }
+    private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Token is missing or invalid.");
+        }
 
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (!board.getUser().getOid().equals(userOid)) {
+            throw new AccessDeniedException("You do not have permission to access this board.");
+        }
+
+        return true;
+    }
 }

@@ -14,6 +14,7 @@ import sit.int221.nw1.dto.requestDTO.deleteStatusDTO;
 import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusesRespondDTO;
+import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.BoardStatus;
@@ -93,17 +94,44 @@ public class StatusesController {
 
 
     @GetMapping("/boards/{boardId}/statuses/{id}")
-    public ResponseEntity getStatusById(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,@PathVariable String id) {
+    public ResponseEntity getStatusById(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
+                                        @PathVariable String id,
+                                        @PathVariable String boardId) {
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);  // ดึง userOid จาก token
+
+        // ค้นหา board ตาม boardId
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // ตรวจสอบว่า userOid ตรงกับเจ้าของ board หรือไม่
+        if (!board.getUser().getOid().equals(userOid)) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access statuses for this board.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+
+
 
         return ResponseEntity.ok(modelMapper.map(statusesService.getStatusById(id), StatusDTO.class));
     }
 
     @PostMapping("/boards/{boardId}/statuses")
-    public ResponseEntity<Statuses> createStatus(@PathVariable String boardId, @RequestBody addStatusDTO addStatusDTO) {
+    public ResponseEntity<Statuses> createStatus(
+                            @PathVariable String boardId,
+                            @RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
+                            @RequestBody(required = false) addStatusDTO addStatusDTO
+    ) {
+        isUserAuthorizedForBoard(rawToken, boardId);
+
+
+
+        if(addStatusDTO==null||addStatusDTO.getName().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
 
@@ -117,7 +145,17 @@ public class StatusesController {
     }
 
     @PutMapping("/boards/{boardId}/statuses/{id}")
-    public ResponseEntity<updateStatusDTO> updateStatus(@PathVariable String boardId, @PathVariable String id, @RequestBody updateStatusDTO updateDTO) {
+    public ResponseEntity<updateStatusDTO> updateStatus(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
+                                                        @PathVariable String boardId,
+                                                        @PathVariable String id,
+                                                        @RequestBody(required = false) updateStatusDTO updateDTO) {
+
+        isUserAuthorizedForBoard(rawToken, boardId);
+
+        if (updateDTO==null||updateDTO.getName().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+
         Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ItemNotFoundException("Board not found"));
         Statuses status = modelMapper.map(updateDTO, Statuses.class);
         statusesService.updateStatus(id, status);
@@ -128,7 +166,27 @@ public class StatusesController {
     }
 
     @DeleteMapping("/boards/{boardId}/statuses/{id}")
-    public ResponseEntity<String> removeStatus(@PathVariable String id) {
+    public ResponseEntity<Object> removeStatus(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
+                                               @PathVariable String id,
+                                               @PathVariable String boardId
+                                               ) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);  // ดึง userOid จาก token
+
+        // ค้นหา board ตาม boardId
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // ตรวจสอบว่า userOid ตรงกับเจ้าของ board หรือไม่
+        if (!board.getUser().getOid().equals(userOid)) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access statuses for this board.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+
         statusesService.deleteStatus(id);
         return ResponseEntity.ok("{}"); // Return empty JSON object on success
     }
@@ -139,4 +197,23 @@ public class StatusesController {
         return ResponseEntity.ok("{}"); // Return empty JSON object on success
     }
 
+
+
+    private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Token is missing or invalid.");
+        }
+
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (!board.getUser().getOid().equals(userOid)) {
+            throw new AccessDeniedException("You do not have permission to access this board.");
+        }
+
+        return true;
+    }
 }

@@ -21,6 +21,7 @@ import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.User;
+import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.repositories.server.UserRepository;
 import sit.int221.nw1.services.BoardStatusService;
 import sit.int221.nw1.services.BoardsService;
@@ -46,9 +47,11 @@ public class BoardsController {
 
     @Autowired
     private NanoUtil nanoUtil;
-
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private BoardsRepository boardsRepository;
 
     @Autowired
     private StatusesService statusesService;
@@ -91,31 +94,20 @@ public class BoardsController {
 
         return ResponseEntity.ok(responseDTOs);
     }
-
     // GET /v3/boards/{id} - Get a specific board by ID with visibility check
     @GetMapping("/boards/{id}")
-    public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
-                                               @PathVariable String id) {
-        String oid = null;
-        // ตรวจสอบว่ามี Token อยู่หรือไม่ และ Token ต้องเริ่มต้นด้วย "Bearer "
-        if (rawToken != null && rawToken.startsWith("Bearer ")) {
-            String token = rawToken.substring(7);
-            try {
-                oid = jwtTokenUtil.getOid(token);
-            } catch (Exception e) {
-                // ถ้า Token ไม่ถูกต้อง ให้ตั้งค่า oid เป็น null เพื่อจัดการต่อไป
-                oid = null;
-            }
-        } else {
-            // ถ้าไม่มี Token หรือ Token ไม่ครบ ให้คืนค่า 403 Forbidden
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Token is missing or incomplete.");
-        }
+    public ResponseEntity<Object> getBoardById(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
+            @PathVariable String id) {
 
         try {
-            // เรียกการค้นหาบอร์ดและตรวจสอบสิทธิ์ของผู้ใช้
-            Boards board = boardService.findBoardByIdWithVisibilityCheck(id, oid);
+            // ตรวจสอบสิทธิ์การเข้าถึงบอร์ดโดยใช้ฟังก์ชัน isUserAuthorizedForBoard
+            isUserAuthorizedForBoard(rawToken, id);
 
-            // สร้าง DTO เพื่อส่งกลับข้อมูลบอร์ด
+            // หากสามารถเข้าถึงได้, ดึงข้อมูลบอร์ดตาม ID
+            Boards board = boardService.findBoardById(id);
+
+            // สร้าง DTO เพื่อส่งข้อมูลบอร์ดกลับไป
             BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
                     board.getBoardId(),
                     board.getBoardName(),
@@ -124,20 +116,71 @@ public class BoardsController {
             );
 
             return ResponseEntity.ok(returnBoardDTO);
+
         } catch (ItemNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Board not found");
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied to this board");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
         }
     }
+
+    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
+//    @GetMapping("/boards/{id}")
+//    public ResponseEntity<Object> getBoardById(
+//            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
+//            @PathVariable String id) {
+//        String oid = null;
+//        // ตรวจสอบว่ามี Token อยู่หรือไม่ และ Token ต้องเริ่มต้นด้วย "Bearer "
+//        if (rawToken != null && rawToken.startsWith("Bearer ")) {
+//            String token = rawToken.substring(7);
+//            try {
+//                oid = jwtTokenUtil.getOid(token);
+//            } catch (Exception e) {
+//                // ถ้า Token ไม่ถูกต้อง ให้ตั้งค่า oid เป็น null เพื่อจัดการต่อไป
+//                oid = null;
+//            }
+//        } else {
+//            System.out.println("HEE");
+//            // ถ้าไม่มี Token หรือ Token ไม่ครบ ให้คืนค่า 403 Forbidden
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Token is missing or incomplete.");
+//        }
+//
+//        try {
+//            // เรียกการค้นหาบอร์ดและตรวจสอบสิทธิ์ของผู้ใช้
+//            Boards board = boardService.findBoardByIdWithVisibilityCheck(id, oid);
+//
+//            // สร้าง DTO เพื่อส่งกลับข้อมูลบอร์ด
+//            BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+//                    board.getBoardId(),
+//                    board.getBoardName(),
+//                    board.getVisibility(),
+//                    new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
+//            );
+//
+//            return ResponseEntity.ok(returnBoardDTO);
+//        } catch (ItemNotFoundException e) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Board not found");
+//        } catch (AccessDeniedException e) {
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied to this board");
+//        }
+//    }
 
     // POST /v3/boards - Create a new board with default visibility as PRIVATE
     @PostMapping("/boards")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
-            @Valid @RequestBody BoardNameRequestDTO boardName
+            @Valid @RequestBody(required = false) BoardNameRequestDTO boardName
     ) {
+        if (boardName==null || boardName.getName()==null) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "boardName is missing", null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+
+
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing token");
         }
 
@@ -196,10 +239,13 @@ public class BoardsController {
     public ResponseEntity<Object> updateBoardVisibility(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String id,
-            @Valid @RequestBody UpdateVisibilityRequest request
+            @Valid @RequestBody(required = false) UpdateVisibilityRequest request
     ) {
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing token");
+
+        isUserAuthorizedForBoard(rawToken, id);
+
+        if (request==null || request.getVisibility()==null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Visibility is missing");
         }
 
         String token = rawToken.substring(7);
@@ -227,4 +273,25 @@ public class BoardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid visibility value");
         }
     }
+
+
+
+    private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            return true;
+        }
+
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (!board.getUser().getOid().equals(userOid)) {
+            throw new AccessDeniedException("You do not have permission to access this board.");
+        }
+
+        return true;
+    }
+
 }
