@@ -56,21 +56,7 @@ public class TasksController {
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
         // ตรวจสอบว่ามีการส่ง Authorization header หรือไม่
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
-
-        String token = rawToken.substring(7); // ตัดคำว่า "Bearer " ออก
-        String userOid = jwtTokenUtil.getOid(token);
-
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-
-        if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access tasks for this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
+        isUserAuthorizedForBoard(rawToken, boardId);
 
         List<TaskDTO> tasks = tasksService.getAllTasksByBoardId(boardId, filterStatuses);
         return ResponseEntity.ok(tasks);
@@ -82,20 +68,9 @@ public class TasksController {
             @PathVariable String boardId,
             @PathVariable Integer taskId,
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
-       if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-           ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
-           return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-       }
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
 
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
-
-        if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access tasks for this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
+        
+   isUserAuthorizedForBoard(rawToken,boardId);
 //        Tasks tasks = new Tasks();
         TasksDTO tasks = tasksService.findTasksById(taskId);
         return ResponseEntity.ok(tasks);
@@ -198,18 +173,27 @@ public class TasksController {
     //     return ResponseEntity.ok(delete);
     // }
     private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            throw new AccessDeniedException("Token is missing or invalid.");
-        }
-
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
-
+        // ค้นหาบอร์ดจาก boardId
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
-        if (!board.getUser().getOid().equals(userOid)) {
-            throw new AccessDeniedException("You do not have permission to access this board.");
+        // ตรวจสอบว่าบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง
+        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
+            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
+        }
+
+        // หากไม่มี Token และบอร์ดเป็น Private ให้ return 403
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
+        }
+
+        // ดึงข้อมูล Token และ OID ของผู้ใช้
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
+        if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
 
         return true;
