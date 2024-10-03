@@ -46,7 +46,7 @@ public class JwtTokenUtil implements Serializable {
         return claims;
     }
 
-    private Boolean isTokenExpired(String token) {
+    public Boolean isTokenExpired(String token) {
         final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(new Date());
     }
@@ -63,17 +63,31 @@ public class JwtTokenUtil implements Serializable {
         return doGenerateToken(claims, userDetails.getUsername());
     }
 
-    //    private String doGenerateToken(Map<String, Object> claims, String subject) {
-//        return Jwts.builder().setHeaderParam("typ", "JWT").setClaims(claims).setSubject(subject)
-//                .setIssuedAt(new Date(System.currentTimeMillis()))
-//                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY))
-//                .signWith(signatureAlgorithm, SECRET_KEY).compact();
-//
-//    }
+    public String generateRefreshToken(UserDetails userDetails, Users user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("iss", "http://intproj23.sit.kmutt.ac.th/nw1/api");
+        claims.put("oid", user.getOid());
+        return doGenerateRefreshToken(claims, userDetails.getUsername());
+    }
+
+    private String doGenerateRefreshToken(Map<String, Object> claims, String subject) {
+        long now = System.currentTimeMillis();
+        Date issuedAt = new Date(now); // iat (issued at)
+        Date expiration = new Date(now + JWT_TOKEN_VALIDITY); // Refresh token validity for 24 hours
+
+        return Jwts.builder()
+                .setHeaderParam("typ", "JWT")
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(issuedAt) // iat
+                .setExpiration(expiration) // exp (24 hours)
+                .signWith(signatureAlgorithm, SECRET_KEY)
+                .compact();
+    }
     private String doGenerateToken(Map<String, Object> claims, String subject) {
         long now = System.currentTimeMillis();
         Date issuedAt = new Date(now); // iat (issued at)
-        Date expiration = new Date(now + JWT_TOKEN_VALIDITY); // exp (expiration)
+        Date expiration = new Date(now + 24 * 60 * 60 * 1000); // exp (expiration)
 
         return Jwts.builder()
                 .setHeaderParam("typ", "JWT")

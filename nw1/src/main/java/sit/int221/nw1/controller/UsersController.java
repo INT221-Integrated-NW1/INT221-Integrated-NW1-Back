@@ -1,13 +1,17 @@
 package sit.int221.nw1.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,15 +61,68 @@ public class UsersController {
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {
-        Users users = repository.findByName(jwtRequestDTO.getUserName());
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
+        // Authenticate user
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
-        UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
-        String token = jwtTokenUtil.generateToken(userDetails,users);
+        // Optional: set the authentication in the security context
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder().accessToken(token).build();
+        UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
+        Users user = repository.findByName(jwtRequestDTO.getUserName());
+
+        // Ensure user is found
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if user not found
+        }
+
+        // Generate access and refresh tokens
+        String accessToken = jwtTokenUtil.generateToken(userDetails, user);
+        String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails, user); // New method for refresh token
+
+        // Return both tokens
+        JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken) // Include refresh token in response
+                .build();
 
         return ResponseEntity.ok(jwtResponseDTO);
     }
+    @PostMapping("/token")
+    public ResponseEntity<JwtResponseDTO> refreshAccessToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if no token provided
+        }
+
+        String refreshToken = authHeader.substring(7);
+        try {
+            // Validate the refresh token
+            if (jwtTokenUtil.isTokenExpired(refreshToken)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if token is expired
+            }
+
+            // Extract OID from the refresh token
+            String oid = jwtTokenUtil.getOid(refreshToken);
+
+            // Use loadUserByOid to load the user
+            UserDetails userDetails = jwtUserDetailsService.loadUserByOid(oid);
+
+            // Generate a new access token
+            String newAccessToken = jwtTokenUtil.generateToken(userDetails, (Users) userDetails);
+
+            JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder()
+                    .accessToken(newAccessToken)
+                    .build();
+
+            return ResponseEntity.ok(jwtResponseDTO);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if user not found
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the exception for debugging
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+    }
+
 }
