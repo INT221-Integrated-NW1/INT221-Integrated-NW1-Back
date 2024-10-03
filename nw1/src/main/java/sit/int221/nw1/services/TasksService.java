@@ -99,45 +99,6 @@ public class TasksService {
 
         return tasksDTO;
     }
-
-    public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
-        // Find the existing task
-        Tasks existingTask = tasksRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
-
-        // Set values from DTO
-        existingTask.setTitle(updateTaskDTO.getTitle());
-        existingTask.setDescription(updateTaskDTO.getDescription());
-        existingTask.setAssignees(updateTaskDTO.getAssignees());
-
-        // Trim values
-        trim(existingTask);
-
-        // Validate the task
-        List<MultiFieldException.FieldError> errors = validateTaskForUpdate(updateTaskDTO);
-
-        if (!errors.isEmpty()) {
-            throw new MultiFieldException(errors);
-        }
-
-        try {
-            Statuses status = statusesRepository.findById(updateTaskDTO.getStatus())
-                    .orElseThrow(() -> new Exception("Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
-            existingTask.setStatus(status);
-        } catch (Exception e) {
-            errors.add(new MultiFieldException.FieldError("status", "Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
-        }
-
-        if (!errors.isEmpty()) {
-            throw new MultiFieldException(errors);
-        }
-
-        try {
-            return tasksRepository.save(existingTask);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update task.", e);
-        }
-    }
     public Tasks createTask(addDTO addDTO, String boardsId) {
         Tasks tasks = modelMapper.map(addDTO, Tasks.class);
 
@@ -180,9 +141,6 @@ public class TasksService {
         }
 
         try {
-//            tasks.setStatus(statusesRepository.findByStatusIdAndBoardsBoardId(addDTO.getStatus(),boardsId)
-//                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status Not Found")));
-            // Fetch the board by ID
             Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Board not found"));
             tasks.setBoards(boards);
             // Save the task to the repository
@@ -192,40 +150,57 @@ public class TasksService {
         }
     }
 
+    public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
+        // Find the existing task
+        Tasks existingTask = tasksRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
 
-    private void trim(Tasks tasks) {
-        tasks.setTitle(StringUtil.trimToNull(tasks.getTitle()));
-        tasks.setDescription(StringUtil.trimToNull(tasks.getDescription()));
-        tasks.setAssignees(StringUtil.trimToNull(tasks.getAssignees()));
-    }
+        // Set values from DTO
+        existingTask.setTitle(updateTaskDTO.getTitle());
+        existingTask.setDescription(updateTaskDTO.getDescription());
+        existingTask.setAssignees(updateTaskDTO.getAssignees());
 
+        // Trim values
+        trim(existingTask);
 
-    // task(id) does not exist, e.g. has already been deleted by another user returns 404 from TaskNotFoundException class
-    public Tasks deleteTask(Integer id,String boardId) {
-        Tasks task = tasksRepository.findByIdAndBoardsBoardId(id,boardId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
-        tasksRepository.delete(task);
-        return task;
-    }
+        // Validate the task
+        List<MultiFieldException.FieldError> errors = validateTaskForUpdate(updateTaskDTO);
 
-    public void transferTasks(String oldStatusId, String newStatusId) {
-        Statuses oldStatus = statusesRepository.findById(oldStatusId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Old Status does not exist"));
-        Statuses newStatus = statusesRepository.findById(newStatusId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "New Status does not exist"));
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
 
-        List<Tasks> tasksToTransfer = tasksRepository.findByStatus(oldStatus);
-        for (Tasks task : tasksToTransfer) {
-            task.setStatus(newStatus);
-            tasksRepository.save(task);
+        try {
+            Statuses status = statusesRepository.findById(updateTaskDTO.getStatus())
+                    .orElseThrow(() -> new Exception("Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
+            existingTask.setStatus(status);
+        } catch (Exception e) {
+            errors.add(new MultiFieldException.FieldError("status", "Status with ID " + updateTaskDTO.getStatus() + " does not exist"));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new MultiFieldException(errors);
+        }
+
+        try {
+            return tasksRepository.save(existingTask);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update task.", e);
         }
     }
+
+
     @Transactional(transactionManager = "serverTransactionManager")
     public TaskResponse deleteTasks(Integer id) {
+        System.out.println("เข้าไหมถามแค่นี้");
         Tasks tasks = tasksRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("NOT FOUND"));
         tasksRepository.delete(tasks);
         return modelMapper.map(tasks, TaskResponse.class);
     }
+
+
+
+
     private List<MultiFieldException.FieldError> validateTaskForUpdate(updateTaskDTO updateTaskDTO) {
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
@@ -254,6 +229,32 @@ public class TasksService {
 
         return errors;
     }
+    private void trim(Tasks tasks) {
+        tasks.setTitle(StringUtil.trimToNull(tasks.getTitle()));
+        tasks.setDescription(StringUtil.trimToNull(tasks.getDescription()));
+        tasks.setAssignees(StringUtil.trimToNull(tasks.getAssignees()));
+    }
+
+
+//    public Tasks deleteTask(Integer id,String boardId) {
+//        Tasks task = tasksRepository.findByIdAndBoardsBoardId(id,boardId).orElseThrow(
+//                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+//        tasksRepository.delete(task);
+//        return task;
+//    }
+
+//    public void transferTasks(String oldStatusId, String newStatusId) {
+//        Statuses oldStatus = statusesRepository.findById(oldStatusId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Old Status does not exist"));
+//        Statuses newStatus = statusesRepository.findById(newStatusId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "New Status does not exist"));
+//
+//        List<Tasks> tasksToTransfer = tasksRepository.findByStatus(oldStatus);
+//        for (Tasks task : tasksToTransfer) {
+//            task.setStatus(newStatus);
+//            tasksRepository.save(task);
+//        }
+//    }
 //    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
 //        return repository.findByStatusNameIn(statusNames);
 //    }

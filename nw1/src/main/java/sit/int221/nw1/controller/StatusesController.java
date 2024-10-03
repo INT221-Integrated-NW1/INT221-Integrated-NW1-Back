@@ -61,21 +61,27 @@ public class StatusesController {
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
+            System.out.println("เข้านี่");
             return ResponseEntity.ok(statusesService.getAllStatus());
         }
-        // ตรวจสอบว่า rawToken ถูกส่งมาและเป็น Bearer token หรือไม่
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
+        }
 
-        // ตัดเอาส่วน "Bearer " ออกและดึง token
+        // ดึงข้อมูล Token และ OID ของผู้ใช้
         String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);  // ดึง userOid จาก token
+        String userOid = jwtTokenUtil.getOid(token);
 
-        
+        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
+        if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
 
         // ตรวจสอบว่า userOid ตรงกับเจ้าของ board หรือไม่
-        if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access statuses for this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
+//        if (!board.getUser().getOid().equals(userOid)) {
+//            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access statuses for this board.", null);
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+//        }
 
         // ดึงสถานะทั้งหมดที่เกี่ยวข้องกับ board
         List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId, userOid);
@@ -88,6 +94,7 @@ public class StatusesController {
         }
 
         // คืนค่ารายการสถานะทั้งหมด
+        System.out.println("เข้านี่เว้ยยยยย");
         return ResponseEntity.ok(statuses);
     }
 
@@ -96,22 +103,7 @@ public class StatusesController {
     public ResponseEntity getStatusById(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
                                         @PathVariable String id,
                                         @PathVariable String boardId) {
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Token is missing or invalid.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);  // ดึง userOid จาก token
-
-        // ค้นหา board ตาม boardId
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-
-        // ตรวจสอบว่า userOid ตรงกับเจ้าของ board หรือไม่
-        if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to access statuses for this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
+    isUserAuthorizedForBoard(rawToken, boardId);
 
 
 
@@ -124,16 +116,19 @@ public class StatusesController {
                             @RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
                             @RequestBody(required = false) addStatusDTO addStatusDTO
     ) {
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
         isUserAuthorizedForBoard(rawToken, boardId);
-
+        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
 
 
         if(addStatusDTO==null||addStatusDTO.getName().isEmpty()){
             return ResponseEntity.badRequest().body(null);
         }
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
-
         Statuses status = new Statuses();
         status.setName(addStatusDTO.getName());
         status.setDescription(addStatusDTO.getDescription());
@@ -149,13 +144,19 @@ public class StatusesController {
                                                         @PathVariable String id,
                                                         @RequestBody(required = false) updateStatusDTO updateDTO) {
 
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
         isUserAuthorizedForBoard(rawToken, boardId);
+        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
 
         if (updateDTO==null||updateDTO.getName().isEmpty()){
             return ResponseEntity.badRequest().body(null);
         }
 
-        Boards board = boardsRepository.findById(boardId).orElseThrow(() -> new ItemNotFoundException("Board not found"));
         Statuses status = modelMapper.map(updateDTO, Statuses.class);
         statusesService.updateStatus(id, status);
 

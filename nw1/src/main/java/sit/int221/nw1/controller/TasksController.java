@@ -22,6 +22,7 @@ import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.repositories.server.BoardsRepository;
+import sit.int221.nw1.repositories.server.TasksRepository;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 import sit.int221.nw1.config.JwtTokenUtil;
@@ -47,6 +48,8 @@ public class TasksController {
      @Autowired
      BoardsRepository boardsRepository;
 
+     @Autowired
+    TasksRepository tasksRepository;
 
 
     @GetMapping("/boards/{boardId}/tasks")
@@ -82,25 +85,31 @@ public class TasksController {
             @RequestBody(required = false) addDTO addDTO,
             @PathVariable String boardId) {
 
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
         isUserAuthorizedForBoard(rawToken, boardId);
-
+        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
 
         if (addDTO == null) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
-
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-
-        // ตรวจสอบว่า Oid ของผู้ใช้ตรงกับ Oid ของเจ้าของ Board หรือไม่
-        if (!board.getUser().getOid().equals(userOid)) {
-            // โยน ResponseStatusException แทนการสร้าง ErrorResponse ตรงนี้
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add tasks to this board.");
-        }
+//
+//        String token = rawToken.substring(7);
+//        String userOid = jwtTokenUtil.getOid(token);
+//
+//        Boards board = boardsRepository.findById(boardId)
+//                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+//
+//        // ตรวจสอบว่า Oid ของผู้ใช้ตรงกับ Oid ของเจ้าของ Board หรือไม่
+//        if (!board.getUser().getOid().equals(userOid)) {
+//            // โยน ResponseStatusException แทนการสร้าง ErrorResponse ตรงนี้
+//            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add tasks to this board.");
+//        }
 
         addDTO.setBoards(boardId);
         Tasks tasks = tasksService.createTask(addDTO, boardId);
@@ -124,14 +133,17 @@ public class TasksController {
 
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
         if (updateTaskDTO == null) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-        if (!board.getUser().getOid().equals(userOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to edit tasks from this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
+//        if (!board.getUser().getOid().equals(userOid)) {
+//            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to edit tasks from this board.", null);
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+//        }
         if(taskId == null || tasksService.findTasksById(taskId) == null){
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Task ID is required.", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
@@ -148,30 +160,18 @@ public class TasksController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String boardId,
             @PathVariable Integer taskId) {
-
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
-
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
-
-        if (!board.getUser().getOid().equals(userOid)) {
-            System.out.println("KUYYYYYYYYYYYYY");
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to remove tasks from this board.", null);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-        }
-
+    isUserAuthorizedForBoard(rawToken, boardId);
+    String token = rawToken.substring(7);
+    String userOid = jwtTokenUtil.getOid(token);
+    Boards board = boardsRepository.findById(boardId)
+            .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+    if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+        throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+    }
         TaskResponse deletedTask = tasksService.deleteTasks(taskId);
         return ResponseEntity.ok(deletedTask);
     }
 
-    // @DeleteMapping("/{taskId}")
-    // public ResponseEntity<deleteTaskDTO> deleteTask(@PathVariable Integer taskId, @PathVariable String boardId) {
-    //     Tasks deletedTask = service.deleteTask(taskId, boardId);
-    //     deleteTaskDTO delete = modelMapper.map(deletedTask, deleteTaskDTO.class);
-    //     delete.setStatus(deletedTask.getStatus().getName());
-    //     return ResponseEntity.ok(delete);
-    // }
     private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
         // ค้นหาบอร์ดจาก boardId
         Boards board = boardsRepository.findById(boardId)
