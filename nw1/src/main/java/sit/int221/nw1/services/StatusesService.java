@@ -50,7 +50,7 @@ public class StatusesService {
     }
 
     public Statuses getStatusById(String Id) {
-        return statusesRepository.findStatusesById(Id).orElseThrow(() -> new ItemNotFoundException("NOT FOUND"));
+        return statusesRepository.findStatusesById(Id).orElseThrow(() -> new ItemNotFoundException("Status"+Id+"NOT FOUND"));
     }
 
     public Statuses createStatus(Statuses status) {

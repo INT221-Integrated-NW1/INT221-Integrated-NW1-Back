@@ -98,18 +98,6 @@ public class TasksController {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-//
-//        String token = rawToken.substring(7);
-//        String userOid = jwtTokenUtil.getOid(token);
-//
-//        Boards board = boardsRepository.findById(boardId)
-//                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-//
-//        // ตรวจสอบว่า Oid ของผู้ใช้ตรงกับ Oid ของเจ้าของ Board หรือไม่
-//        if (!board.getUser().getOid().equals(userOid)) {
-//            // โยน ResponseStatusException แทนการสร้าง ErrorResponse ตรงนี้
-//            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add tasks to this board.");
-//        }
 
         addDTO.setBoards(boardId);
         Tasks tasks = tasksService.createTask(addDTO, boardId);
@@ -140,10 +128,7 @@ public class TasksController {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-//        if (!board.getUser().getOid().equals(userOid)) {
-//            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to edit tasks from this board.", null);
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-//        }
+
         if(taskId == null || tasksService.findTasksById(taskId) == null){
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Task ID is required.", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);

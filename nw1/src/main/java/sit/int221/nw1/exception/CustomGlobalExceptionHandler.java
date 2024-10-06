@@ -49,12 +49,6 @@ public class CustomGlobalExceptionHandler {
 
 
 
-//    @ExceptionHandler(AuthenticationException.class)
-//    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-//    public ResponseEntity<ErrorResponse> handleAuthenticationException(WebRequest request) {
-//        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Username or Password is incorrect", request.getDescription(false));
-//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-//    }
     @ExceptionHandler(MultiFieldException.class)
     public ResponseEntity<List<MultiFieldException.FieldError>> handleMultiFieldException(MultiFieldException ex) {
         return new ResponseEntity<>(ex.getFieldErrors(), HttpStatus.BAD_REQUEST);

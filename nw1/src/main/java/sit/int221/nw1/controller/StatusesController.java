@@ -105,8 +105,6 @@ public class StatusesController {
                                         @PathVariable String boardId) {
     isUserAuthorizedForBoard(rawToken, boardId);
 
-
-
         return ResponseEntity.ok(modelMapper.map(statusesService.getStatusById(id), StatusDTO.class));
     }
 
@@ -192,9 +190,9 @@ public class StatusesController {
     }
 
     @DeleteMapping("/boards/{boardId}/statuses/{id}/{newId}")
-    public ResponseEntity<String> transferAndDeleteStatus(@PathVariable String id, @PathVariable String newId) {
+    public ResponseEntity<Object> transferAndDeleteStatus(@PathVariable String id, @PathVariable String newId) {
         statusesService.transferAndDeleteStatus(id, newId);
-        return ResponseEntity.ok("{}"); // Return empty JSON object on success
+        return new ResponseEntity<>("The tasks have been transferred and the status has been deleted", HttpStatus.OK);
     }
 
 
