@@ -19,23 +19,21 @@ import java.util.Collection;
 import java.util.List;
 
 @Service
-public class JwtUserDetailsService implements  UserDetailsService {
+public class JwtUserDetailsService implements UserDetailsService {
 
     @Autowired
     private UsersRepository usersRepository;
 
-
     @Override
-    public  UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
         Users user = usersRepository.findByName(userName);
 
-        if (user == null ) {
+        if (user == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userName + " does not exist !!");
         }
 
         List<GrantedAuthority> roles = new ArrayList<>();
         GrantedAuthority grantedAuthority = new GrantedAuthority() {
-
             @Override
             public String getAuthority() {
                 return user.getRole();
@@ -43,9 +41,26 @@ public class JwtUserDetailsService implements  UserDetailsService {
         };
         roles.add(grantedAuthority);
 
-        return new AuthUser(user.getOid(), user.getName(), user.getUsername(), user.getPassword(), user.getEmail() ,user.getRole(),roles);
-
-
+        return new AuthUser(user.getOid(), user.getName(), user.getUsername(), user.getPassword(), user.getEmail(), user.getRole(), roles);
     }
 
+    // New method to load user by OID
+    public UserDetails loadUserByOid(String oid) throws UsernameNotFoundException {
+        Users user = usersRepository.findByOid(oid);
+
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User with OID " + oid + " does not exist !!");
+        }
+
+        List<GrantedAuthority> roles = new ArrayList<>();
+        GrantedAuthority grantedAuthority = new GrantedAuthority() {
+            @Override
+            public String getAuthority() {
+                return user.getRole();
+            }
+        };
+        roles.add(grantedAuthority);
+
+        return new AuthUser(user.getOid(), user.getName(), user.getUsername(), user.getPassword(), user.getEmail(), user.getRole(), roles);
+    }
 }
