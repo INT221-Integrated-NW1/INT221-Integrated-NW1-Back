@@ -43,6 +43,10 @@ public class Boards {
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 
+//    @OneToMany(mappedBy = "boards", fetch = FetchType.EAGER)
+//    @JsonIgnore
+//    private List<Collabs> collabs = new ArrayList<>();
+
     // Constructor with boardId, name, visibility, and user
     public Boards(String boardId, String name, String visibility, User user) {
         this.boardId = boardId;
@@ -67,4 +71,3 @@ public class Boards {
         this.boardStatuses = boardStatuses;
     }
 }
-

@@ -24,18 +24,23 @@ public class User {
     @Column(name = "name", nullable = false)
     private String name;
 
+//    @Column(name = "email", nullable = false)
+//    private String email;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     @JsonIgnore
     private List<Boards> boards = new ArrayList<>();
+//
+//    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+//    @JsonIgnore
+//    private List<Collabs> collabs = new ArrayList<>();
 
     public User(String oid) {
         this.oid = oid;
     }
-
     // Method to check if the user is the owner of a board
     public boolean isOwner(Boards board) {
         return this.oid.equals(board.getUser().getOid());
     }
 }
-
 

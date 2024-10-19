@@ -28,7 +28,6 @@ public class BoardStatus {
     @JoinColumn(name = "status_id", nullable = false)
     @JsonIgnore
     private Statuses status;
-
     public BoardStatus(Boards board, Statuses status) {
         this.boards = board;
         this.status = status;

@@ -19,7 +19,7 @@ import sit.int221.nw1.config.JwtTokenUtil;
 import sit.int221.nw1.dto.requestDTO.JwtDTO;
 import sit.int221.nw1.dto.responseDTO.JwtRefreshDTO;
 import sit.int221.nw1.dto.responseDTO.JwtResponseDTO;
-import sit.int221.nw1.dto.responseDTO.UsersDTO;
+
 import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.services.JwtUserDetailsService;
@@ -51,14 +51,6 @@ public class UsersController {
     @Autowired
     AuthenticationManager authenticationManager;
 
-    @GetMapping("/users")
-    public List<UsersDTO> getAllUsers() {
-        List<Users> users = usersService.getAllUsers();
-        return users.stream()
-                .map(us -> modelMapper.map(us, UsersDTO.class))
-                .collect(Collectors.toList());
-
-    }
 
 //    @PostMapping("/login")
 //    public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {

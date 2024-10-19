@@ -13,6 +13,7 @@ import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.config.AuthUser;
 import sit.int221.nw1.config.JwtTokenUtil;
 import sit.int221.nw1.dto.requestDTO.UpdateVisibilityRequest;
+import sit.int221.nw1.dto.responseDTO.BoardCollabResponse;
 import sit.int221.nw1.dto.responseDTO.BoardNameRequestDTO;
 import sit.int221.nw1.dto.responseDTO.BoardsResponseDTO;
 import sit.int221.nw1.dto.responseDTO.UserResponseDTO;
@@ -95,6 +96,7 @@ public class BoardsController {
 
         return ResponseEntity.ok(responseDTOs);
     }
+
     // GET /v3/boards/{id} - Get a specific board by ID with visibility check
     @GetMapping("/boards/{id}")
     public ResponseEntity<Object> getBoardById(
@@ -134,7 +136,7 @@ public class BoardsController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @Valid @RequestBody(required = false) BoardNameRequestDTO boardName
     ) {
-        if (boardName==null || boardName.getName()==null) {
+        if (boardName == null || boardName.getName() == null) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "boardName is missing", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
@@ -208,11 +210,11 @@ public class BoardsController {
         String userOid = jwtTokenUtil.getOid(token);
         String oid;
         isUserAuthorizedForBoard(rawToken, id);
-        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+        if (!board.getUser().getOid().equals(userOid) && board.getVisibility().startsWith("PUBLIC")) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
 
-        if (request==null || request.getVisibility()==null) {
+        if (request == null || request.getVisibility() == null) {
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Visibility is missing");
         }
@@ -241,34 +243,28 @@ public class BoardsController {
         }
     }
 
-
-
     private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
-        // ค้นหาบอร์ดจาก boardId
+
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
 
-        // ตรวจสอบว่าบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
-            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
+            return true;
         }
 
-
-        // หากไม่มี Token และบอร์ดเป็น Private ให้ return 403
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
         }
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-        // ดึงข้อมูล Token และ OID ของผู้ใช้
 
 
-        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
         if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
 
         return true;
     }
+
 }
