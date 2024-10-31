@@ -67,6 +67,7 @@ public class BoardStatusService {
     }
 
     public void deleteBoardStatusByBoardStatusId(Integer bsId) {
+        System.out.println("Deleting BoardStatus with ID: " + bsId);
         boardStatusRepository.deleteById(bsId);
     }
 

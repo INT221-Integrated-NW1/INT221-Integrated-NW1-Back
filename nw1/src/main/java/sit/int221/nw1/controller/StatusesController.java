@@ -96,7 +96,7 @@ public class StatusesController {
         }
 
         // คืนค่ารายการสถานะทั้งหมด
-        System.out.println("เข้านี่เว้ยยยยย");
+
         return ResponseEntity.ok(statuses);
     }
 
@@ -106,10 +106,16 @@ public class StatusesController {
                                         @PathVariable String id,
                                         @PathVariable String boardId) {
     isUserAuthorizedForBoard(rawToken, boardId);
+        // ค้นหา BoardStatus ตาม boardId และ statusId
+        BoardStatus boardStatus = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
+        if (boardStatus == null) {
+            throw new ItemNotFoundException("Status not found for the specified board.");
+        }
 
-
-
-        return ResponseEntity.ok(modelMapper.map(statusesService.getStatusById(id), StatusDTO.class));
+        // แปลงสถานะที่พบเป็น DTO และส่งกลับ
+        StatusDTO statusDTO = modelMapper.map(boardStatus.getStatus(), StatusDTO.class);
+        return ResponseEntity.ok(statusDTO);
+        //return ResponseEntity.ok(modelMapper.map(statusesService.getStatusById(id), StatusDTO.class));
     }
 
     @PostMapping("/boards/{boardId}/statuses")
@@ -209,11 +215,13 @@ public class StatusesController {
         }
 
         BoardStatus bs = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
+        //System.out.println(bs);
         if (bs.getStatus().getId().equals("000000000000001") || bs.getStatus().getId().equals("000000000000004")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The status '" + bs.getStatus().getName() + "' cannot be deleted");
         }
         boardStatusService.deleteBoardStatusByBoardStatusId(bs.getBsId());
-        statusesService.deleteStatus(bs.getStatus().getId());
+        System.out.println(bs.getStatus().getId());
+        //statusesService.deleteStatus(bs.getStatus().getId());
         return ResponseEntity.ok("{}"); // Return empty JSON object on success
     }
 
