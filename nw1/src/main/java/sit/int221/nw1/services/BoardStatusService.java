@@ -1,7 +1,9 @@
 package sit.int221.nw1.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
@@ -42,7 +44,10 @@ public class BoardStatusService {
 
         return boardStatuses;
     }
-
+//    public List<BoardStatus> getAllStatusByBoardId(String boardId) {
+//        List<BoardStatus> bs = boardStatusRepository.findBoardStatusesByBoards_BoardId(boardId);
+//        return bs;
+//    }
     // Method to create a new BoardStatus
     public BoardStatus createBoardStatus(Boards board, Statuses status) {
         BoardStatus bs = new BoardStatus(board, status);
@@ -53,6 +58,16 @@ public class BoardStatusService {
     // Save default BoardStatus for a new Board
     public void SaveDefaultBoardStatus(List<BoardStatus> boardStatuses) {
         boardStatusRepository.saveAll(boardStatuses);
+    }
+
+    public BoardStatus findBoardStatusByBoardIdAndStatusId(String boardId, String statusId) {
+        BoardStatus bs = boardStatusRepository.findBoardStatusesByBoards_BoardIdAndStatus_Id(boardId, statusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "BoardStatus not found"));
+        return bs;
+    }
+
+    public void deleteBoardStatusByBoardStatusId(Integer bsId) {
+        boardStatusRepository.deleteById(bsId);
     }
 
     // Get all statuses for a specific Board by boardId with visibility check
@@ -68,6 +83,7 @@ public class BoardStatusService {
         // If the board is private and the user is not the owner, throw an exception
         throw new AccessDeniedException("Access denied to board statuses");
     }
-
-
+    public BoardStatus updateBoardStatusByBoardStatusId(BoardStatus bs) {
+        return boardStatusRepository.save(bs);
+    }
 }

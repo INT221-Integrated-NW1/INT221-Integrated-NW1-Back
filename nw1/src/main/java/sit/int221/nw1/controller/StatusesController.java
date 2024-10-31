@@ -15,11 +15,13 @@ import sit.int221.nw1.dto.requestDTO.updateStatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusesRespondDTO;
 import sit.int221.nw1.exception.AccessDeniedException;
+import sit.int221.nw1.exception.BadRequestException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
+import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.services.BoardStatusService;
 import sit.int221.nw1.services.BoardsService;
@@ -139,7 +141,7 @@ public class StatusesController {
     }
 
     @PutMapping("/boards/{boardId}/statuses/{id}")
-    public ResponseEntity<updateStatusDTO> updateStatus(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
+    public ResponseEntity<Object> updateStatus(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String rawToken,
                                                         @PathVariable String boardId,
                                                         @PathVariable String id,
                                                         @RequestBody(required = false) updateStatusDTO updateDTO) {
@@ -153,15 +155,34 @@ public class StatusesController {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
 
-        if (updateDTO==null||updateDTO.getName().isEmpty()){
-            return ResponseEntity.badRequest().body(null);
+        if (updateDTO == null||updateDTO.getName().isEmpty()) {
+            throw new BadRequestException("Request body is missing or malformed");
+        }
+        Statuses status = modelMapper.map(updateDTO, Statuses.class);
+        if (id.equals("000000000000001") || id.equals("000000000000004")) {
+            throw new BadRequestException("The status '" + status.getName() + "' cannot be edit");
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The status '" + status.getName() + "' cannot be edit");
+        }
+        if (id.equals("000000000000002") || id.equals("000000000000003")) {
+            BoardStatus bs = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
+            Statuses s1 = new Statuses();
+            s1.setName(updateDTO.getName());
+            s1.setDescription(updateDTO.getDescription());
+            Statuses newStatus = statusesService.createStatus(s1);
+            bs.setStatus(newStatus);
+            List<Tasks> tasks = tasksService.findTasksByBoardsIdAndStatusId(boardId, id);
+            for (Tasks task : tasks) {
+                task.setStatus(newStatus);
+            }
+            tasksService.saveAll(tasks);
+            boardStatusService.updateBoardStatusByBoardStatusId(bs);
+            return ResponseEntity.ok(newStatus);
         }
 
-        Statuses status = modelMapper.map(updateDTO, Statuses.class);
         statusesService.updateStatus(id, status);
-
         Statuses updatedStatus = statusesService.getStatusById(id);
         updateStatusDTO updatedStatusDTO = modelMapper.map(updatedStatus, updateStatusDTO.class);
+
         return ResponseEntity.ok(updatedStatusDTO);
     }
 
@@ -187,7 +208,12 @@ public class StatusesController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
 
-        statusesService.deleteStatus(id);
+        BoardStatus bs = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
+        if (bs.getStatus().getId().equals("000000000000001") || bs.getStatus().getId().equals("000000000000004")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The status '" + bs.getStatus().getName() + "' cannot be deleted");
+        }
+        boardStatusService.deleteBoardStatusByBoardStatusId(bs.getBsId());
+        statusesService.deleteStatus(bs.getStatus().getId());
         return ResponseEntity.ok("{}"); // Return empty JSON object on success
     }
 

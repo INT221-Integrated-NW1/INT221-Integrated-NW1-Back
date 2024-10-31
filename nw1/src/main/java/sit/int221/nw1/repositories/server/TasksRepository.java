@@ -14,7 +14,7 @@ public interface TasksRepository extends JpaRepository<Tasks, Integer>{
     List<Tasks> findByBoardsBoardId(String boardId);
     Optional<Tasks> findByIdAndBoardsBoardId(Integer id , String boardId);
     Optional<Tasks> findTasksById(Integer id);
-
+    List<Tasks> findTasksByBoards_BoardIdAndStatus_Id(String boardId, String statusId);
 
 
 }

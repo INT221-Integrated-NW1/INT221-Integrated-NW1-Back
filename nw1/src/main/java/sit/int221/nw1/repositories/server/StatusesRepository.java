@@ -9,4 +9,5 @@ public interface StatusesRepository extends JpaRepository<Statuses, String> {
     boolean existsByName(String name);
     Optional<Statuses> findByName(String name);
     Optional<Statuses> findStatusesById(String Id);
+
 }

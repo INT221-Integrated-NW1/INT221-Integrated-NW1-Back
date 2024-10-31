@@ -77,7 +77,7 @@ public class StatusesService {
         }
 
         String statusId = nanoUtil.nanoIdGenerate(15);
-        status.setId(statusId);;
+        status.setId(statusId);
         try {
             return statusesRepository.save(status);
         } catch (Exception e) {
@@ -203,10 +203,10 @@ public class StatusesService {
         }
     }
 
-    private void checkStatusNameExists(String name) {
-        if (statusesRepository.findByName(name) != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status name already exists!");
-        }
-    }
+//    private void checkStatusNameExists(String name) {
+//        if (statusesRepository.findByName(name) != null) {
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status name already exists!");
+//        }
+//    }
 
 }

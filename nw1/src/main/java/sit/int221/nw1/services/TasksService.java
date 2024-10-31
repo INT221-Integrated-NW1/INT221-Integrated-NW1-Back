@@ -81,6 +81,10 @@ public class TasksService {
         }).collect(Collectors.toList());
     }
 
+    public List<Tasks> findTasksByBoardsIdAndStatusId(String boardId, String statusId){
+        return tasksRepository.findTasksByBoards_BoardIdAndStatus_Id(boardId, statusId);
+    }
+
 
     public TasksDTO findTasksById(Integer tasksId) {
         Tasks task = tasksRepository.findTasksById(tasksId)
@@ -234,31 +238,8 @@ public class TasksService {
         tasks.setDescription(StringUtil.trimToNull(tasks.getDescription()));
         tasks.setAssignees(StringUtil.trimToNull(tasks.getAssignees()));
     }
-
-
-//    public Tasks deleteTask(Integer id,String boardId) {
-//        Tasks task = tasksRepository.findByIdAndBoardsBoardId(id,boardId).orElseThrow(
-//                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
-//        tasksRepository.delete(task);
-//        return task;
-//    }
-
-//    public void transferTasks(String oldStatusId, String newStatusId) {
-//        Statuses oldStatus = statusesRepository.findById(oldStatusId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Old Status does not exist"));
-//        Statuses newStatus = statusesRepository.findById(newStatusId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "New Status does not exist"));
-//
-//        List<Tasks> tasksToTransfer = tasksRepository.findByStatus(oldStatus);
-//        for (Tasks task : tasksToTransfer) {
-//            task.setStatus(newStatus);
-//            tasksRepository.save(task);
-//        }
-//    }
-//    public List<Tasks> getTasksByStatusNames(List<String> statusNames) {
-//        return repository.findByStatusNameIn(statusNames);
-//    }
+    public void saveAll(List<Tasks> tasks) {
+        tasksRepository.saveAll(tasks);
+    }
 }
-
-
 
