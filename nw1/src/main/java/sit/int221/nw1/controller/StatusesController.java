@@ -59,25 +59,27 @@ public class StatusesController {
     public ResponseEntity<Object> getAllStatus(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
             @PathVariable String boardId) {
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+        isUserAuthorizedForBoard(rawToken, boardId);
 
-        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
-            System.out.println("เข้านี่");
-            return ResponseEntity.ok(statusesService.getAllStatus());
-        }
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
-        }
-
-        // ดึงข้อมูล Token และ OID ของผู้ใช้
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
-
-        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
-        if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
-            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
-        }
+//        Boards board = boardsRepository.findById(boardId)
+//                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+//
+//        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
+//            System.out.println("เข้านี่");
+//            return ResponseEntity.ok(statusesService.getAllStatus());
+//        }
+//        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+//            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
+//        }
+//
+//        // ดึงข้อมูล Token และ OID ของผู้ใช้
+//        String token = rawToken.substring(7);
+//        String userOid = jwtTokenUtil.getOid(token);
+//
+//        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
+//        if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
+//            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+//        }
 
         // ตรวจสอบว่า userOid ตรงกับเจ้าของ board หรือไม่
 //        if (!board.getUser().getOid().equals(userOid)) {
@@ -86,7 +88,7 @@ public class StatusesController {
 //        }
 
         // ดึงสถานะทั้งหมดที่เกี่ยวข้องกับ board
-        List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId, userOid);
+        List<BoardStatus> boardStatuses = boardStatusService.getAllStatusByBoardId(boardId);
 
         // เก็บรวบรวม statuses จาก boardStatuses
         List<Statuses> statuses = new ArrayList<>();
