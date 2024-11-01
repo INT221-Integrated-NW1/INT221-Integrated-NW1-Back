@@ -61,10 +61,10 @@ public class StatusesService {
             errors.add(new MultiFieldException.FieldError("name", "must not be null"));
         }
 
-        // Validate non-UNIQUE statusName
-        if (statusesRepository.existsByName(status.getName())) {
-            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
-        }
+       // Validate non-UNIQUE statusName
+//        if (statusesRepository.existsByName(status.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+//        }
         if (status.getName() == null || status.getName().length() > 50) {
             errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));
         }
