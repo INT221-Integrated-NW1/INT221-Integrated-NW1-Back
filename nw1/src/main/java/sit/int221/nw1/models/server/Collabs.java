@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.ZonedDateTime;
@@ -36,9 +37,10 @@ public class Collabs {
     }
 
     @JsonIgnore
-    @UpdateTimestamp
-    @Column(name = "added_on")
+    @CreationTimestamp
+    @Column(name="added_on", nullable = false, insertable = false, updatable = false)
     private ZonedDateTime addedOn;
+
 
     @Column(name = "email")
     private String email;

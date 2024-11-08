@@ -148,7 +148,7 @@ public class BoardsController {
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
 
         // สร้าง DTO สำหรับข้อมูลบอร์ดที่ต้องการส่งกลับ
-        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), userResponseDTO);
+        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(),board.getCreated_On(), userResponseDTO);
 
         // ส่งกลับข้อมูลบอร์ดพร้อมกับข้อมูลเจ้าของ
         return ResponseEntity.ok(boardsResponseDTO);
@@ -279,6 +279,7 @@ public class BoardsController {
                 createdBoard.getBoardId(),
                 createdBoard.getBoardName(),
                 createdBoard.getVisibility(),
+                createdBoard.getCreated_On(),
                 new UserResponseDTO(user.getOid(), user.getName())
         );
 
@@ -314,10 +315,6 @@ public class BoardsController {
 
         ReturnCollabDTO returnCollab = collabsService.addCollab(id, requestCollab);
 
-//        if (!( board.getVisibility().equals("PRIVATE") || isOwner)) {
-//            // ใหม่: ป้องกันไม่ให้ผู้ใช้เข้าถึงบอร์ดที่เป็น 'PRIVATE'
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
-//        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(returnCollab);
 
@@ -360,6 +357,7 @@ public class BoardsController {
                     updatedBoard.getBoardId(),
                     updatedBoard.getBoardName(),
                     updatedBoard.getVisibility(),
+                    updatedBoard.getCreated_On(),
                     new UserResponseDTO(updatedBoard.getUser().getOid(), updatedBoard.getUser().getName())
             );
             return ResponseEntity.ok(returnBoardDTO);

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZonedDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -14,5 +16,5 @@ public class CollabDTO {
     private String email;
     private String oid;
     private String accessRight;
-    private String addedOn;
+    private ZonedDateTime addedOn;
 }

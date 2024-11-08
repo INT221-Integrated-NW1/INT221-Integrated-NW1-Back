@@ -5,8 +5,10 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import sit.int221.nw1.models.client.Users;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +32,11 @@ public class Boards {
 
     @Column(name = "visibility", nullable = false, length = 10)
     private String visibility = "PRIVATE";  // Default value is PRIVATE
+    @JsonIgnore
+    @CreationTimestamp
+    @Column(name="created_On", nullable = false, insertable = false, updatable = false)
+    private ZonedDateTime created_On;
+
 
     @ManyToOne
     @JoinColumn(name = "oid", nullable = false)
