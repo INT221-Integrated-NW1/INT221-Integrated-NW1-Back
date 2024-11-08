@@ -39,6 +39,11 @@ public class Boards {
     @JsonIgnore
     private List<Tasks> tasks = new ArrayList<>();
 
+    @OneToMany(mappedBy = "board", fetch = FetchType.EAGER) // Add this line for collaborators
+    @JsonIgnore
+    private List<Collabs> collaborators = new ArrayList<>();
+
+
     @OneToMany(mappedBy = "boards", fetch = FetchType.EAGER)
     @JsonIgnore
     private List<BoardStatus> boardStatuses;

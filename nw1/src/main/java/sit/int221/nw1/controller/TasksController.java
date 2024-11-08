@@ -23,6 +23,7 @@ import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.repositories.server.TasksRepository;
+import sit.int221.nw1.services.BoardsService;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 import sit.int221.nw1.config.JwtTokenUtil;
@@ -51,6 +52,9 @@ public class TasksController {
      @Autowired
     TasksRepository tasksRepository;
 
+     @Autowired
+    BoardsService boardService;
+
 
     @GetMapping("/boards/{boardId}/tasks")
     public ResponseEntity<Object> getAllTasks(
@@ -59,7 +63,8 @@ public class TasksController {
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
         // ตรวจสอบว่ามีการส่ง Authorization header หรือไม่
-        isUserAuthorizedForBoard(rawToken, boardId);
+        isUserAuthorizedForGETBoard(rawToken, boardId);
+
 
         List<TaskDTO> tasks = tasksService.getAllTasksByBoardId(boardId, filterStatuses);
         return ResponseEntity.ok(tasks);
@@ -73,7 +78,7 @@ public class TasksController {
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
         
-   isUserAuthorizedForBoard(rawToken,boardId);
+   isUserAuthorizedForGETBoard(rawToken,boardId);
 //        Tasks tasks = new Tasks();
         TasksDTO tasks = tasksService.findTasksById(taskId);
         return ResponseEntity.ok(tasks);
@@ -98,18 +103,7 @@ public class TasksController {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-//
-//        String token = rawToken.substring(7);
-//        String userOid = jwtTokenUtil.getOid(token);
-//
-//        Boards board = boardsRepository.findById(boardId)
-//                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-//
-//        // ตรวจสอบว่า Oid ของผู้ใช้ตรงกับ Oid ของเจ้าของ Board หรือไม่
-//        if (!board.getUser().getOid().equals(userOid)) {
-//            // โยน ResponseStatusException แทนการสร้าง ErrorResponse ตรงนี้
-//            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add tasks to this board.");
-//        }
+
 
         addDTO.setBoards(boardId);
         Tasks tasks = tasksService.createTask(addDTO, boardId);
@@ -194,6 +188,41 @@ public class TasksController {
         // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
         if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+        }
+
+
+        return true;
+    }
+
+
+    private boolean isUserAuthorizedForGETBoard(String rawToken, String boardId) {
+        // ค้นหาบอร์ดจาก boardId
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // หากบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง ให้อนุญาตการเข้าถึง
+        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().equals("PUBLIC")) {
+            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
+        }
+
+        // หากไม่มี Token หรือ Token ไม่ถูกต้อง และบอร์ดเป็น Private ให้โยน AccessDeniedException
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
+        }
+
+        // ดึง Token และข้อมูล OID ของผู้ใช้จาก Token
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        // ตรวจสอบว่าผู้ใช้เป็นเจ้าของบอร์ด หรือเป็น Collaborator
+        if (board.getVisibility().equals("PRIVATE")) {
+            boolean isOwner = board.getUser().getOid().equals(userOid);
+            boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
+
+            // หากผู้ใช้ไม่ใช่เจ้าของและไม่เป็น Collaborator ให้โยน AccessDeniedException
+            if (!isOwner && !isCollaborator) {
+                throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+            }
         }
 
         return true;

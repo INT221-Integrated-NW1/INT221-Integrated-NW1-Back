@@ -13,9 +13,8 @@ import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.config.AuthUser;
 import sit.int221.nw1.config.JwtTokenUtil;
 import sit.int221.nw1.dto.requestDTO.UpdateVisibilityRequest;
-import sit.int221.nw1.dto.responseDTO.BoardNameRequestDTO;
-import sit.int221.nw1.dto.responseDTO.BoardsResponseDTO;
-import sit.int221.nw1.dto.responseDTO.UserResponseDTO;
+import sit.int221.nw1.dto.requestDTO.addCollabDTO;
+import sit.int221.nw1.dto.responseDTO.*;
 import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
@@ -26,6 +25,7 @@ import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.repositories.server.UserRepository;
 import sit.int221.nw1.services.BoardStatusService;
 import sit.int221.nw1.services.BoardsService;
+import sit.int221.nw1.services.CollabsService;
 import sit.int221.nw1.services.StatusesService;
 
 
@@ -58,73 +58,162 @@ public class BoardsController {
     private StatusesService statusesService;
 
     @Autowired
+    private CollabsService collabsService;
+
+    @Autowired
     private BoardStatusService boardStatusService;
 
     // GET /v3/boards - Get all boards accessible by the user
+//    @GetMapping("/boards")
+//    public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
+//        String oid = null;
+//        if (rawToken != null && rawToken.startsWith("Bearer ")) {
+//            String token = rawToken.substring(7);
+//            try {
+//                oid = jwtTokenUtil.getOid(token);
+//            } catch (Exception e) {
+//                // Invalid token, proceed to fetch only public boards
+//                oid = null;
+//            }
+//        }
+//
+//        List<Boards> boards;
+//        if (oid != null) {
+//            // Fetch both public boards and user's private boards
+//            boards = boardService.findAccessibleBoards(oid);
+//        } else {
+//            // Fetch only public boards
+//            boards = boardService.findPublicBoards();
+//        }
+//
+//        // Convert each board into BoardsResponseDTO including User information
+//        List<BoardsResponseDTO> responseDTOs = boards.stream()
+//                .map(board -> new BoardsResponseDTO(
+//                        board.getBoardId(),
+//                        board.getBoardName(),
+//                        board.getVisibility(),
+//                        new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
+//                ))
+//                .collect(Collectors.toList());
+//
+//        return ResponseEntity.ok(responseDTOs);
+//    }
+    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
+
     @GetMapping("/boards")
     public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
-        String oid = null;
-        if (rawToken != null && rawToken.startsWith("Bearer ")) {
-            String token = rawToken.substring(7);
-            try {
-                oid = jwtTokenUtil.getOid(token);
-            } catch (Exception e) {
-                // Invalid token, proceed to fetch only public boards
-                oid = null;
-            }
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        List<Boards> boards;
-        if (oid != null) {
-            // Fetch both public boards and user's private boards
-            boards = boardService.findAccessibleBoards(oid);
-        } else {
-            // Fetch only public boards
-            boards = boardService.findPublicBoards();
-        }
+        String oid = jwtTokenUtil.getOid(token);
+//        List<Boards> boards = boardService.findBoardByOid(oid);
+        BoardListDTO boardDTOs = boardService.getAllBoardsByOid(oid);
 
-        // Convert each board into BoardsResponseDTO including User information
-        List<BoardsResponseDTO> responseDTOs = boards.stream()
-                .map(board -> new BoardsResponseDTO(
-                        board.getBoardId(),
-                        board.getBoardName(),
-                        board.getVisibility(),
-                        new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
-                ))
-                .collect(Collectors.toList());
+//        List<ReturnBoardDTO> boardDTOs = boards.stream().map(board -> {
+//            BoardOwnerDTO ownerDTO = new BoardOwnerDTO(board.getUser().getOid(), board.getUser().getName());
+//
+//            return new ReturnBoardDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), ownerDTO);
+//        }).collect(Collectors.toList());
 
-        return ResponseEntity.ok(responseDTOs);
+        return ResponseEntity.ok(boardDTOs);
     }
-    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
-    @GetMapping("/boards/{id}")
-    public ResponseEntity<Object> getBoardById(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
-            @PathVariable String id) {
-
-        try {
-            // ตรวจสอบสิทธิ์การเข้าถึงบอร์ดโดยใช้ฟังก์ชัน isUserAuthorizedForBoard
-            isUserAuthorizedForBoard(rawToken, id);
-
-            // หากสามารถเข้าถึงได้, ดึงข้อมูลบอร์ดตาม ID
-            Boards board = boardService.findBoardById(id);
-
-            // สร้าง DTO เพื่อส่งข้อมูลบอร์ดกลับไป
-            BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
-                    board.getBoardId(),
-                    board.getBoardName(),
-                    board.getVisibility(),
-                    new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
-            );
-
-            return ResponseEntity.ok(returnBoardDTO);
-
-        } catch (ItemNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Board not found");
-        } catch (AccessDeniedException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied to this board");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
+    @GetMapping("/boards/{boardId}")
+    public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
+                                               @PathVariable String boardId) {
+        String userOid = null; // Initialize userOid as null
+        System.out.println(rawToken.equals("Bearer null"));
+        System.out.println(boardId);
+        if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
+            String token = rawToken.substring(7);
+            userOid = jwtTokenUtil.getOid(token); // Get OID from token
         }
+
+        Boards board = boardService.findBoardById(boardId);
+
+        // ตรวจสอบความเป็นเจ้าของหรือสถานะการมองเห็น
+        boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
+        boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
+
+        if (!isOwner && board.getVisibility().equals("PRIVATE") && !isCollaborator) {
+            // ใหม่: ป้องกันไม่ให้ผู้ใช้เข้าถึงบอร์ดที่เป็น 'PRIVATE'
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
+        }
+
+        // สร้าง DTO สำหรับข้อมูลเจ้าของบอร์ด
+        UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
+
+        // สร้าง DTO สำหรับข้อมูลบอร์ดที่ต้องการส่งกลับ
+        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), userResponseDTO);
+
+        // ส่งกลับข้อมูลบอร์ดพร้อมกับข้อมูลเจ้าของ
+        return ResponseEntity.ok(boardsResponseDTO);
+    }
+
+    @GetMapping("/boards/{boardId}/collabs")
+    public ResponseEntity<Object> getBoardCollabs(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String boardId
+    ) {
+        Boards board = boardService.findBoardById(boardId);
+        List<CollabDTO> collaborators = collabsService.getBoardCollabs(boardId);
+        if (board.getVisibility().equals("PUBLIC")){
+            return ResponseEntity.ok(collaborators);
+        }
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userOid = jwtTokenUtil.getOid(token);
+
+        boolean isOwner = board.getUser().getOid().equals(userOid);
+        boolean isCollabs = collabsService.existsByOidAndBoardId(userOid, boardId);
+
+        if (!isOwner && !isCollabs && !board.getVisibility().equals("PUBLIC")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+
+        return ResponseEntity.ok(collaborators);
+
+
+    }
+
+    @GetMapping("/boards/{boardId}/collabs/{collab_oid}")
+    public ResponseEntity<Object> getBoardCollabsByOid(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String boardId,
+            @PathVariable String collab_oid
+    ) {
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userOid = jwtTokenUtil.getOid(token);
+
+        Boards board = boardService.findBoardById(boardId);
+        boolean isOwner = board.getUser().getOid().equals(userOid);
+        boolean isCollabs = collabsService.existsByOidAndBoardId(userOid, boardId);
+
+        if (!isOwner && !isCollabs && !board.getVisibility().equals("PUBLIC")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        CollabDTO collaborator = collabsService.getBoardCollabByOid(collab_oid, boardId);
+
+        return ResponseEntity.ok(collaborator);
+
+
     }
 
 
@@ -172,6 +261,7 @@ public class BoardsController {
             AuthUser authUser = (AuthUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             user = new User(oid);
             user.setName(authUser.getName());
+            user.setEmail(authUser.getEmail());
             userRepository.save(user);
         }
 
@@ -194,6 +284,47 @@ public class BoardsController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(returnBoardDTO);
     }
+
+    @PostMapping("/boards/{id}/collabs")
+    public ResponseEntity<Object> addCollaborator(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String id,
+            @RequestBody(required = false) addCollabDTO requestCollab
+    ) {
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userOid = jwtTokenUtil.getOid(token);
+        Boards board = boardService.findBoardById(id);
+
+
+        boolean isOwner = (board.getUser().getOid().equals(userOid));
+        if (!isOwner || requestCollab.getEmail() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+        }
+
+        if ((requestCollab.getAccessRight() == null) || (!requestCollab.getAccessRight().equals("READ") && !requestCollab.getAccessRight().equals("WRITE"))) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Access Right must be READ or WRITE");
+        }
+
+
+        ReturnCollabDTO returnCollab = collabsService.addCollab(id, requestCollab);
+
+//        if (!( board.getVisibility().equals("PRIVATE") || isOwner)) {
+//            // ใหม่: ป้องกันไม่ให้ผู้ใช้เข้าถึงบอร์ดที่เป็น 'PRIVATE'
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
+//        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(returnCollab);
+
+    }
+
+
+
 
     // PATCH /v3/boards/{id}/visibility - Update board visibility
     @PatchMapping("/boards/{id}")
@@ -253,8 +384,6 @@ public class BoardsController {
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
             return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
         }
-
-
         // หากไม่มี Token และบอร์ดเป็น Private ให้ return 403
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
@@ -262,7 +391,6 @@ public class BoardsController {
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
         // ดึงข้อมูล Token และ OID ของผู้ใช้
-
 
         // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
         if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {

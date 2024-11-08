@@ -3,14 +3,17 @@ package sit.int221.nw1.services;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import sit.int221.nw1.dto.responseDTO.*;
 import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.models.server.Boards;
+import sit.int221.nw1.models.server.Collabs;
 import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sit.int221.nw1.repositories.server.CollabsBoardsRepository;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -24,14 +27,59 @@ public class BoardsService {
     private BoardsRepository boardsRepository;
 
     @Autowired
-    private ModelMapper modelMapper;
+    private ModelMapper mapper;
 
     @Autowired
     private UsersRepository usersRepository;
 
+    @Autowired
+    private CollabsBoardsRepository collabsRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(BoardsService.class);
 
     // Find boards accessible by the user (both PUBLIC and PRIVATE owned by the user)
+
+    public List<CollabsBoardsDTO> findCollaborateBoardsByOid (String oid) {
+        List<Collabs> allCollabs = collabsRepository.findCollabsByOid(oid);
+        List<CollabsBoardsDTO> boards = new ArrayList<>();
+        for (Collabs collab : allCollabs) {
+            Boards board = findBoardById(collab.getBoardId());
+            CollabsBoardsDTO collabsBoardsDTO = mapper.map(board, CollabsBoardsDTO.class);
+
+            collabsBoardsDTO.setAccessRight(collab.getAccessRight().name().equals("WRITE") ? "WRITE" : "READ");
+
+            OwnerDTO ownerDTO = new OwnerDTO(board.getUser().getOid(), board.getUser().getName());
+            collabsBoardsDTO.setOwner(ownerDTO);
+            boards.add(collabsBoardsDTO);
+        }
+        return boards;
+    }
+
+
+    public BoardListDTO getAllBoardsByOid(String oid) {
+        List<BoardsResponseDTO> personalBoards = new ArrayList<>();
+        List<Boards> allPersonalBoards =  findBoardByOid(oid);
+        for (Boards board : allPersonalBoards) {
+            BoardsResponseDTO boardsResponseDTO = mapper.map(board, BoardsResponseDTO.class);
+            UserResponseDTO userResponseDTO= new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
+            boardsResponseDTO.setUser(userResponseDTO);
+
+            personalBoards.add(boardsResponseDTO);
+        }
+
+        List<CollabsBoardsDTO> allCollaborateBoards = findCollaborateBoardsByOid(oid);
+
+        BoardListDTO allBoards = new BoardListDTO();
+        allBoards.setPERSONAL_BOARD(personalBoards);
+        allBoards.setCOLLABORATE_BOARD(allCollaborateBoards);
+        return allBoards;
+    }
+
+    public boolean getIsBoardCollaborator(String oid, String boardId) {
+        return collabsRepository.existsByOidAndBoardBoardId(oid, boardId);
+    }
+
+
     public List<Boards> findAccessibleBoards(String oid) {
         List<Boards> userBoards = boardsRepository.findByUserOid(oid);
         List<Boards> publicBoards = boardsRepository.findByVisibility("PUBLIC");
@@ -104,6 +152,9 @@ public class BoardsService {
         return boardsRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("Board not found"));
     }
 
+
+
+
     public Users findByOid(String oid) {
         Users user = usersRepository.findByOid(oid);
         if (user == null) {
@@ -111,4 +162,7 @@ public class BoardsService {
         }
         return user;
     }
+
+
+
 }

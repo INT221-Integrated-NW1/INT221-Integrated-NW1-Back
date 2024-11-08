@@ -5,13 +5,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
-public class OwnerDTO {
-    private String oid;
+@AllArgsConstructor
+@NoArgsConstructor
+public class CollabsBoardsDTO {
+    private String id;
     private String name;
+    private String visibility;
+    private String accessRight;
+    private OwnerDTO owner;
 }
-
