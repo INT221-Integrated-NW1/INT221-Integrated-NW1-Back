@@ -47,7 +47,7 @@ public class BoardsService {
             CollabsBoardsDTO collabsBoardsDTO = mapper.map(board, CollabsBoardsDTO.class);
 
             collabsBoardsDTO.setAccessRight(collab.getAccessRight().name().equals("WRITE") ? "WRITE" : "READ");
-
+            collabsBoardsDTO.setAddedOn(collab.getAddedOn());
             OwnerDTO ownerDTO = new OwnerDTO(board.getUser().getOid(), board.getUser().getName());
             collabsBoardsDTO.setOwner(ownerDTO);
             boards.add(collabsBoardsDTO);
