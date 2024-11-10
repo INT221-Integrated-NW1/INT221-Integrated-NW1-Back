@@ -94,7 +94,7 @@ public class TasksController {
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-        isUserAuthorizedForBoard(rawToken, boardId);
+        isUserAuthorizedForGETBoard(rawToken, boardId);
         if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }

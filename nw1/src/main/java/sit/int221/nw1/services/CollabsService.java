@@ -72,9 +72,6 @@ public class CollabsService {
         return returnCollabsDTO;
     }
 
-
-
-
     public List<CollabDTO> getBoardCollabs (String boardId) {
         Boards board = boardService.findBoardById(boardId);
         List<Collabs> boardCollabs = board.getCollaborators();
@@ -97,5 +94,38 @@ public class CollabsService {
 
         return collabDTO;
     }
+    public CollabDTO updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight) {
+        Collabs collab = collabsRepository.findCollabsByOidAndBoardId(collabOid, boardId);
+        if (collab == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collaborator not found");
+        }
 
+        if (!accessRight.equals("READ") && !accessRight.equals("WRITE")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid access right");
+        }
+
+        collab.setAccessRight(accessRight.equals("WRITE") ? Collabs.AccessRight.WRITE : Collabs.AccessRight.READ);
+        Collabs updatedCollab = collabsRepository.save(collab);
+
+        CollabDTO collabDTO = mapper.map(updatedCollab, CollabDTO.class);
+        collabDTO.setName(updatedCollab.getUser().getName());
+        return collabDTO;
+    }
+
+    public void removeCollaborator(String boardId, String collabOid) {
+        Collabs collab = collabsRepository.findCollabsByOidAndBoardId(collabOid, boardId);
+        if (collab == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collaborator not found");
+        }
+        collabsRepository.delete(collab);
+    }
+
+    public boolean isCollaborator(String oid, String boardId) {
+        return collabsRepository.existsByOidAndBoardBoardId(oid, boardId);
+    }
+
+    public boolean hasWriteAccess(String oid, String boardId) {
+        Collabs collab = collabsRepository.findCollabsByOidAndBoardId(oid, boardId);
+        return collab != null && collab.getAccessRight() == Collabs.AccessRight.WRITE;
+    }
 }

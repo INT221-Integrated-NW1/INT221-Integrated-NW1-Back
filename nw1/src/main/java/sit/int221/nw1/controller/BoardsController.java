@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.Utils.NanoUtil;
 import sit.int221.nw1.config.AuthUser;
 import sit.int221.nw1.config.JwtTokenUtil;
@@ -30,6 +31,7 @@ import sit.int221.nw1.services.StatusesService;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -369,7 +371,77 @@ public class BoardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid visibility value");
         }
     }
+    @PatchMapping("/boards/{id}/collabs/{collab_oid}")
+    public ResponseEntity<Object> updateCollaboratorAccess(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String id,
+            @PathVariable String collab_oid,
+            @RequestBody Map<String, String> request
+    ) {
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String userOid = jwtTokenUtil.getOid(token);
+        Boards board = boardService.findBoardById(id);
+
+        // Check if requester is board owner
+        if (!board.getUser().getOid().equals(userOid)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only board owner can update collaborator access");
+        }
+
+        String accessRight = request.get("accessRight");
+        if (accessRight == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Access right is required");
+        }
+
+        try {
+            CollabDTO updatedCollab = collabsService.updateCollaboratorAccessRight(id, collab_oid, accessRight);
+            return ResponseEntity.ok(updatedCollab);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        }
+    }
+
+    @DeleteMapping("/boards/{id}/collabs/{collab_oid}")
+    public ResponseEntity<Object> removeOrLeaveCollaboration(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
+            @PathVariable String id,
+            @PathVariable String collab_oid
+    ) {
+        if (rawToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String token = rawToken.substring(7);
+        if (jwtTokenUtil.isTokenExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String userOid = jwtTokenUtil.getOid(token);
+        Boards board = boardService.findBoardById(id);
+
+        // Check permissions
+        boolean isOwner = board.getUser().getOid().equals(userOid);
+        boolean isCollaboratorLeaving = userOid.equals(collab_oid);
+
+        if (!isOwner && !isCollaboratorLeaving) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Only board owner or the collaborator themselves can remove collaboration");
+        }
+
+        try {
+            collabsService.removeCollaborator(id, collab_oid);
+            return ResponseEntity.ok().build();
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        }
+    }
 
 
     private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
@@ -396,5 +468,10 @@ public class BoardsController {
         }
 
         return true;
+    }
+    private boolean canManageTasksAndStatuses(String userOid, String boardId) {
+        Boards board = boardService.findBoardById(boardId);
+        return board.getUser().getOid().equals(userOid) || // Is owner
+                collabsService.hasWriteAccess(userOid, boardId); // Is collaborator with WRITE access
     }
 }
