@@ -77,7 +77,7 @@ public class TasksController {
             @PathVariable Integer taskId,
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
-        
+
    isUserAuthorizedForGETBoard(rawToken,boardId);
 //        Tasks tasks = new Tasks();
         TasksDTO tasks = tasksService.findTasksById(taskId);
@@ -120,36 +120,67 @@ public class TasksController {
             @PathVariable Integer taskId,
             @RequestBody(required = false) updateTaskDTO updateTaskDTO) {
 
-        isUserAuthorizedForBoard(rawToken, boardId);
-
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
+        // Get board first
         Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
-        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
-            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // Check if user is collaborator
+        boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
+
+        // If collaborator, return 403 Forbidden
+        if (isCollaborator) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Collaborators can read but cannot modify tasks",
+                    null
+            );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
+
+        // Now do the regular authorization check for other cases
+        boolean isUserAuthorizedForUpdateTask = isUserAuthorizedForUpdateTask(rawToken, boardId, userOid, board);
+
+        if (!isUserAuthorizedForUpdateTask) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "You do not have permission to edit tasks from this board",
+                    null
+            );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+
+        // Check if task exists
+        TasksDTO task = tasksService.findTasksById(taskId);
+        if (task == null) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.NOT_FOUND.value(),
+                    "Task not found",
+                    null
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+
+        // Check request body
         if (updateTaskDTO == null) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
-//        if (!board.getUser().getOid().equals(userOid)) {
-//            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "You do not have permission to edit tasks from this board.", null);
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-//        }
-        if(taskId == null || tasksService.findTasksById(taskId) == null){
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Task ID is required.", null);
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.BAD_REQUEST.value(),
+                    "Request body is missing or malformed",
+                    null
+            );
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
 
+        // Proceed with update
         updateTaskDTO.setId(taskId);
         Tasks updatedTask = tasksService.updateTask(taskId, updateTaskDTO);
         addDTORespond addDTORespond = modelMapper.map(updatedTask, addDTORespond.class);
         return ResponseEntity.ok(addDTORespond);
     }
 
-@DeleteMapping("/boards/{boardId}/tasks/{taskId}")
+    @DeleteMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> deleteTasks(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @PathVariable String boardId,
@@ -194,7 +225,21 @@ public class TasksController {
         return true;
     }
 
+    private boolean isUserAuthorizedForUpdateTask(String rawToken, String boardId, String userOid, Boards board) {
+        // Check if the user is the owner of the board
+        if (board.getUser().getOid().equals(userOid)) {
+            return true;
+        }
 
+        // If the board is public, return false (403 Forbidden)
+        if (board.getVisibility().equals("PUBLIC")) {
+            return false;
+        }
+
+        // If the board is private, check if the user is a collaborator
+        boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
+        return isCollaborator;
+    }
     private boolean isUserAuthorizedForGETBoard(String rawToken, String boardId) {
         // ค้นหาบอร์ดจาก boardId
         Boards board = boardsRepository.findById(boardId)

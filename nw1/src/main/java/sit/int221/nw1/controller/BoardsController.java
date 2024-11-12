@@ -127,35 +127,31 @@ public class BoardsController {
     @GetMapping("/boards/{boardId}")
     public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
                                                @PathVariable String boardId) {
-        String userOid = null; // Initialize userOid as null
-        System.out.println(rawToken.equals("Bearer null"));
-        System.out.println(boardId);
+        String userOid = null;
+
+        // Check if the rawToken is present and valid
         if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
             String token = rawToken.substring(7);
-            userOid = jwtTokenUtil.getOid(token); // Get OID from token
+            userOid = jwtTokenUtil.getOid(token);
         }
 
         Boards board = boardService.findBoardById(boardId);
 
-        // ตรวจสอบความเป็นเจ้าของหรือสถานะการมองเห็น
+        // Check if the user is the owner or a collaborator
         boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-        if (!isOwner && board.getVisibility().equals("PRIVATE") && !isCollaborator) {
-            // ใหม่: ป้องกันไม่ให้ผู้ใช้เข้าถึงบอร์ดที่เป็น 'PRIVATE'
+        // If the board is private and the user is not the owner or a collaborator, return 403 Forbidden
+        if (board.getVisibility().equals("PRIVATE") && !isOwner && !isCollaborator) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
         }
 
-        // สร้าง DTO สำหรับข้อมูลเจ้าของบอร์ด
+        // Create the response DTOs
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
+        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), board.getCreated_On(), userResponseDTO);
 
-        // สร้าง DTO สำหรับข้อมูลบอร์ดที่ต้องการส่งกลับ
-        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(),board.getCreated_On(), userResponseDTO);
-
-        // ส่งกลับข้อมูลบอร์ดพร้อมกับข้อมูลเจ้าของ
         return ResponseEntity.ok(boardsResponseDTO);
     }
-
     @GetMapping("/boards/{boardId}/collabs")
     public ResponseEntity<Object> getBoardCollabs(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
