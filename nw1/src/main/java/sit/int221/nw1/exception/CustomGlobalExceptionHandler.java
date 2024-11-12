@@ -76,5 +76,6 @@ public class CustomGlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(ex.getStatusCode().value(), ex.getReason(), request.getDescription(false));
         return new ResponseEntity<>(errorResponse, ex.getStatusCode());
     }
+
 }
 

@@ -112,11 +112,16 @@ public class CollabsService {
         return collabDTO;
     }
 
-    public void removeCollaborator(String boardId, String collabOid) {
+    public void removeCollaborator(String boardId, String collabOid, String userOid) {
         Collabs collab = collabsRepository.findCollabsByOidAndBoardId(collabOid, boardId);
         if (collab == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collaborator not found");
         }
+
+        if (!collab.getUser().getOid().equals(userOid) && !boardService.findBoardById(boardId).getUser().getOid().equals(userOid)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. Only the board owner or the collaborator themselves can remove collaboration");
+        }
+
         collabsRepository.delete(collab);
     }
 

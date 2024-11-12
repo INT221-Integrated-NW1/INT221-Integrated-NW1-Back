@@ -65,43 +65,6 @@ public class BoardsController {
     @Autowired
     private BoardStatusService boardStatusService;
 
-    // GET /v3/boards - Get all boards accessible by the user
-//    @GetMapping("/boards")
-//    public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
-//        String oid = null;
-//        if (rawToken != null && rawToken.startsWith("Bearer ")) {
-//            String token = rawToken.substring(7);
-//            try {
-//                oid = jwtTokenUtil.getOid(token);
-//            } catch (Exception e) {
-//                // Invalid token, proceed to fetch only public boards
-//                oid = null;
-//            }
-//        }
-//
-//        List<Boards> boards;
-//        if (oid != null) {
-//            // Fetch both public boards and user's private boards
-//            boards = boardService.findAccessibleBoards(oid);
-//        } else {
-//            // Fetch only public boards
-//            boards = boardService.findPublicBoards();
-//        }
-//
-//        // Convert each board into BoardsResponseDTO including User information
-//        List<BoardsResponseDTO> responseDTOs = boards.stream()
-//                .map(board -> new BoardsResponseDTO(
-//                        board.getBoardId(),
-//                        board.getBoardName(),
-//                        board.getVisibility(),
-//                        new UserResponseDTO(board.getUser().getOid(), board.getUser().getName())
-//                ))
-//                .collect(Collectors.toList());
-//
-//        return ResponseEntity.ok(responseDTOs);
-//    }
-    // GET /v3/boards/{id} - Get a specific board by ID with visibility check
-
     @GetMapping("/boards")
     public ResponseEntity<Object> getAllBoards(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken) {
         if (rawToken == null) {
@@ -432,7 +395,7 @@ public class BoardsController {
         }
 
         try {
-            collabsService.removeCollaborator(id, collab_oid);
+            collabsService.removeCollaborator(id, collab_oid , userOid);
             return ResponseEntity.ok().build();
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
