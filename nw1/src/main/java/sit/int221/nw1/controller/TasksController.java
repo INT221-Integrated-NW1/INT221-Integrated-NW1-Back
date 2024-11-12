@@ -24,6 +24,7 @@ import sit.int221.nw1.models.server.Tasks;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.repositories.server.TasksRepository;
 import sit.int221.nw1.services.BoardsService;
+import sit.int221.nw1.services.CollabsService;
 import sit.int221.nw1.services.ListMapper;
 import sit.int221.nw1.services.TasksService;
 import sit.int221.nw1.config.JwtTokenUtil;
@@ -54,7 +55,8 @@ public class TasksController {
 
      @Autowired
     BoardsService boardService;
-
+     @Autowired
+    CollabsService collabsService;
 
     @GetMapping("/boards/{boardId}/tasks")
     public ResponseEntity<Object> getAllTasks(
@@ -94,16 +96,12 @@ public class TasksController {
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-        isUserAuthorizedForGETBoard(rawToken, boardId);
-        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
-            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
-        }
+        isUserAuthorizedForBoardWithWriteAccess(rawToken, boardId);
 
         if (addDTO == null) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
 
         addDTO.setBoards(boardId);
         Tasks tasks = tasksService.createTask(addDTO, boardId);
@@ -111,7 +109,6 @@ public class TasksController {
         URI location = URI.create("/" + boardId + "/tasks/");
         return ResponseEntity.created(location).body(addDTORespond);
     }
-
 
     @PutMapping("/boards/{boardId}/tasks/{taskId}")
     public ResponseEntity<Object> updateTask(
@@ -268,6 +265,34 @@ public class TasksController {
             if (!isOwner && !isCollaborator) {
                 throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
             }
+        }
+
+        return true;
+    }
+    private boolean isUserAuthorizedForBoardWithWriteAccess(String rawToken, String boardId) {
+        Boards board = boardsRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // Check if the board is public and the user has not provided a valid token
+        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().equals("PUBLIC")) {
+            return true; // Allow access to public boards without a token
+        }
+
+        // If no token is provided or the token is invalid, deny access to private boards
+        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
+        }
+
+        String token = rawToken.substring(7);
+        String userOid = jwtTokenUtil.getOid(token);
+
+        // Check if the user is the owner of the board or has write access as a collaborator
+        boolean isOwner = board.getUser().getOid().equals(userOid);
+        boolean hasWriteAccess = collabsService.hasWriteAccess(userOid, boardId);
+
+        // If the user is not the owner and does not have write access, deny access
+        if (!isOwner && !hasWriteAccess) {
+            throw new AccessDeniedException("Access denied. You do not have permission to create tasks on this board.");
         }
 
         return true;
