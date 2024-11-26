@@ -19,10 +19,13 @@ import sit.int221.nw1.dto.responseDTO.*;
 import sit.int221.nw1.exception.AccessDeniedException;
 import sit.int221.nw1.exception.ErrorResponse;
 import sit.int221.nw1.exception.ItemNotFoundException;
+import sit.int221.nw1.models.client.Users;
 import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.User;
+import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.repositories.server.BoardsRepository;
+import sit.int221.nw1.repositories.server.CollabsBoardsRepository;
 import sit.int221.nw1.repositories.server.UserRepository;
 import sit.int221.nw1.services.BoardStatusService;
 import sit.int221.nw1.services.BoardsService;
@@ -43,6 +46,9 @@ import java.util.stream.Collectors;
 public class BoardsController {
 
     @Autowired
+    private CollabsBoardsRepository collabsBoardsRepository;
+
+    @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
     @Autowired
@@ -52,6 +58,9 @@ public class BoardsController {
     private NanoUtil nanoUtil;
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UsersRepository usersRepository;
 
     @Autowired
     private BoardsRepository boardsRepository;
@@ -384,22 +393,24 @@ public class BoardsController {
 
         String userOid = jwtTokenUtil.getOid(token);
         Boards board = boardService.findBoardById(id);
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Users currentUser = usersRepository.findByName(username);
 
         // Check permissions
         boolean isOwner = board.getUser().getOid().equals(userOid);
-        boolean isCollaboratorLeaving = userOid.equals(collab_oid);
+        boolean isCollaboratorLeaving = collab_oid.equals(userOid);
+        boolean isCollaborator = collabsBoardsRepository.existsByOidAndBoardBoardId(currentUser.getOid(), id);
 
         if (!isOwner && !isCollaboratorLeaving) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Only board owner or the collaborator themselves can remove collaboration");
         }
-
-        try {
-            collabsService.removeCollaborator(id, collab_oid , userOid);
-            return ResponseEntity.ok().build();
-        } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        if (!isOwner && !(isCollaborator && currentUser.getOid().equals(collab_oid))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not allowed to remove this collaborator.");
         }
+            collabsService.removeCollaborator(id, collab_oid);
+            return ResponseEntity.ok().build();
+
     }
 
 
