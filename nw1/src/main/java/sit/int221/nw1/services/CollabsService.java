@@ -56,6 +56,7 @@ public class CollabsService {
         myUserRepository.save(myUserAddUser);
 
         Collabs collab = new Collabs();
+        collab.setOid(addUser.oid);
         collab.setBoardId(boardId);
         collab.setOid(myUserAddUser.getOid());
         collab.setAccessRight(requestCollabsDTO.getAccessRight().equals("WRITE") ? Collabs.AccessRight.WRITE : Collabs.AccessRight.READ);
@@ -64,10 +65,11 @@ public class CollabsService {
         collabsRepository.save(collab);
 
         ReturnCollabDTO returnCollabsDTO = new ReturnCollabDTO();
+        returnCollabsDTO.setOid(addUser.oid);
         returnCollabsDTO.setBoardID(boardId);
         returnCollabsDTO.setCollaboratorName(addUser.getName());
         returnCollabsDTO.setCollaboratorEmail(addUser.getEmail());
-        returnCollabsDTO.setPermission(requestCollabsDTO.getAccessRight());
+        returnCollabsDTO.setAccessRight(requestCollabsDTO.getAccessRight());
 
         return returnCollabsDTO;
     }

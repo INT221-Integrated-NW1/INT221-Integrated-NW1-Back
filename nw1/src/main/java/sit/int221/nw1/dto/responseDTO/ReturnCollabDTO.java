@@ -10,8 +10,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReturnCollabDTO {
+    private String oid;
     private String boardID;
     private String collaboratorName;
     private String collaboratorEmail;
-    private String permission;
+    private String accessRight;
 }
