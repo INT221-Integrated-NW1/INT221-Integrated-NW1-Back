@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-// Boards.java
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -27,11 +26,11 @@ public class Boards {
 
     @NotBlank(message = "boardName cannot be null or empty.")
     @Size(max = 120, message = "boardName length exceeds the maximum limit of 120.")
-    @Column(name = "board_name", nullable = false, length = 120) // Updated length to 120
+    @Column(name = "board_name", nullable = false, length = 120)
     private String boardName;
 
     @Column(name = "visibility", nullable = false, length = 10)
-    private String visibility = "PRIVATE";  // Default value is PRIVATE
+    private String visibility = "PRIVATE";
     @JsonIgnore
     @CreationTimestamp
     @Column(name="created_On", nullable = false, insertable = false, updatable = false)
@@ -46,7 +45,7 @@ public class Boards {
     @JsonIgnore
     private List<Tasks> tasks = new ArrayList<>();
 
-    @OneToMany(mappedBy = "board", fetch = FetchType.EAGER) // Add this line for collaborators
+    @OneToMany(mappedBy = "board", fetch = FetchType.EAGER)
     @JsonIgnore
     private List<Collabs> collaborators = new ArrayList<>();
 
@@ -55,7 +54,6 @@ public class Boards {
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 
-    // Constructor with boardId, name, visibility, and user
     public Boards(String boardId, String name, String visibility, User user) {
         this.boardId = boardId;
         this.boardName = name;
@@ -63,7 +61,6 @@ public class Boards {
         this.user = user;
     }
 
-    // Constructor without visibility (default to PRIVATE)
     public Boards(String boardId, String name, User user) {
         this.boardId = boardId;
         this.boardName = name;
@@ -71,7 +68,6 @@ public class Boards {
         this.visibility = "PRIVATE";
     }
 
-    // Constructor with boardId, name, user, and boardStatuses
     public Boards(String boardId, String name, User user, List<BoardStatus> boardStatuses) {
         this.boardId = boardId;
         this.boardName = name;

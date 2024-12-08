@@ -28,10 +28,7 @@ public class Statuses {
     @Column(name = "status_description")
     private String description;
 
-//    @ManyToOne
-//    @JoinColumn(name = "board_id", nullable = false)
-//    private Boards boards;
-//
+
     @OneToMany(mappedBy = "status", fetch = FetchType.EAGER)
     @JsonIgnore
     private List<Tasks> tasks = new ArrayList<>();
@@ -40,7 +37,5 @@ public class Statuses {
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 
-//    public int getNoOfTasks() {
-//        return tasks.size();
-//    }
+
 }

@@ -7,8 +7,6 @@ import sit.int221.nw1.models.server.Statuses;
 import java.util.Optional;
 
 public interface StatusRepository extends JpaRepository<Status, Integer> {
-    Status findByName(String name);
-    boolean existsByName(String name);
 
 
 

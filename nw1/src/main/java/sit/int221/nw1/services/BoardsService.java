@@ -37,9 +37,8 @@ public class BoardsService {
 
     private static final Logger logger = LoggerFactory.getLogger(BoardsService.class);
 
-    // Find boards accessible by the user (both PUBLIC and PRIVATE owned by the user)
 
-    public List<CollabsBoardsDTO> findCollaborateBoardsByOid (String oid) {
+    public List<CollabsBoardsDTO> findCollaborateBoardsByOid(String oid) {
         List<Collabs> allCollabs = collabsRepository.findCollabsByOid(oid);
         List<CollabsBoardsDTO> boards = new ArrayList<>();
         for (Collabs collab : allCollabs) {
@@ -58,10 +57,10 @@ public class BoardsService {
 
     public BoardListDTO getAllBoardsByOid(String oid) {
         List<BoardsResponseDTO> personalBoards = new ArrayList<>();
-        List<Boards> allPersonalBoards =  findBoardByOid(oid);
+        List<Boards> allPersonalBoards = findBoardByOid(oid);
         for (Boards board : allPersonalBoards) {
             BoardsResponseDTO boardsResponseDTO = mapper.map(board, BoardsResponseDTO.class);
-            UserResponseDTO userResponseDTO= new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
+            UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
             boardsResponseDTO.setUser(userResponseDTO);
 
             personalBoards.add(boardsResponseDTO);
@@ -84,7 +83,6 @@ public class BoardsService {
         List<Boards> userBoards = boardsRepository.findByUserOid(oid);
         List<Boards> publicBoards = boardsRepository.findByVisibility("PUBLIC");
 
-        // Combine the two lists, avoiding duplicates if any
         Set<String> boardIds = new HashSet<>();
         List<Boards> accessibleBoards = new ArrayList<>();
 
@@ -102,17 +100,16 @@ public class BoardsService {
         return accessibleBoards;
     }
 
-    // Find only public boards
+
     public List<Boards> findPublicBoards() {
         return boardsRepository.findByVisibility("PUBLIC");
     }
 
-    // Create a new board
+
     public Boards createBoard(Boards board) {
         return boardsRepository.save(board);
     }
 
-    // Find board by ID and perform visibility check
     public Boards findBoardByIdWithVisibilityCheck(String id, String oid) {
         Boards board = boardsRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
@@ -127,8 +124,7 @@ public class BoardsService {
         throw new AccessDeniedException("Access denied to this board");
     }
 
-    // Update board visibility
-    public Boards updateBoardVisibility(String id, String visibility, String oid) {
+        public Boards updateBoardVisibility(String id, String visibility, String oid) {
         Boards board = boardsRepository.findById(id).orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
         if (!oid.equals(board.getUser().getOid())) {
@@ -143,7 +139,6 @@ public class BoardsService {
         return boardsRepository.save(board);
     }
 
-    // Other existing methods...
     public List<Boards> findBoardByOid(String oid) {
         return boardsRepository.findByUserOid(oid);
     }
@@ -153,8 +148,6 @@ public class BoardsService {
     }
 
 
-
-
     public Users findByOid(String oid) {
         Users user = usersRepository.findByOid(oid);
         if (user == null) {
@@ -162,7 +155,6 @@ public class BoardsService {
         }
         return user;
     }
-
 
 
 }

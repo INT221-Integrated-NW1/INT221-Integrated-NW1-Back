@@ -39,7 +39,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 
-// BoardsController.java
 @RestController
 @CrossOrigin(origins = {"http://localhost:5173", "https://ip23nw1.sit.kmutt.ac.th:3333", "https://intproj23.sit.kmutt.ac.th"})
 @RequestMapping("/v3")
@@ -66,9 +65,6 @@ public class BoardsController {
     private BoardsRepository boardsRepository;
 
     @Autowired
-    private StatusesService statusesService;
-
-    @Autowired
     private CollabsService collabsService;
 
     @Autowired
@@ -85,14 +81,8 @@ public class BoardsController {
         }
 
         String oid = jwtTokenUtil.getOid(token);
-//        List<Boards> boards = boardService.findBoardByOid(oid);
         BoardListDTO boardDTOs = boardService.getAllBoardsByOid(oid);
 
-//        List<ReturnBoardDTO> boardDTOs = boards.stream().map(board -> {
-//            BoardOwnerDTO ownerDTO = new BoardOwnerDTO(board.getUser().getOid(), board.getUser().getName());
-//
-//            return new ReturnBoardDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), ownerDTO);
-//        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(boardDTOs);
     }
@@ -101,7 +91,7 @@ public class BoardsController {
                                                @PathVariable String boardId) {
         String userOid = null;
 
-        // Check if the rawToken is present and valid
+
         if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
             String token = rawToken.substring(7);
             userOid = jwtTokenUtil.getOid(token);
@@ -109,16 +99,15 @@ public class BoardsController {
 
         Boards board = boardService.findBoardById(boardId);
 
-        // Check if the user is the owner or a collaborator
+
         boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-        // If the board is private and the user is not the owner or a collaborator, return 403 Forbidden
+
         if (board.getVisibility().equals("PRIVATE") && !isOwner && !isCollaborator) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
         }
 
-        // Create the response DTOs
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
         BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), board.getCreated_On(), userResponseDTO);
 
@@ -186,8 +175,6 @@ public class BoardsController {
 
     }
 
-
-    // POST /v3/boards - Create a new board with default visibility as PRIVATE
     @PostMapping("/boards")
     public ResponseEntity<Object> createBoard(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
@@ -222,7 +209,7 @@ public class BoardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
 
-        // Find or create the user
+
         Optional<User> userOptional = userRepository.findById(oid);
         User user;
         if (userOptional.isPresent()) {
@@ -235,16 +222,16 @@ public class BoardsController {
             userRepository.save(user);
         }
 
-        // Create the board with default visibility as PRIVATE
+
         Boards board = new Boards(boardId, boardName.getName(), "PRIVATE", user);
         List<BoardStatus> boardStatuses = boardStatusService.createDefaultBoardStatus(board);
         board.setBoardStatuses(boardStatuses);
 
-        // Save the created board
+
         Boards createdBoard = boardService.createBoard(board);
         boardStatusService.SaveDefaultBoardStatus(boardStatuses);
 
-        // Return board details including the user information and visibility
+
         BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
                 createdBoard.getBoardId(),
                 createdBoard.getBoardName(),
@@ -291,9 +278,6 @@ public class BoardsController {
     }
 
 
-
-
-    // PATCH /v3/boards/{id}/visibility - Update board visibility
     @PatchMapping("/boards/{id}")
     public ResponseEntity<Object> updateBoardVisibility(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
@@ -358,7 +342,7 @@ public class BoardsController {
         String userOid = jwtTokenUtil.getOid(token);
         Boards board = boardService.findBoardById(id);
 
-        // Check if requester is board owner
+
         if (!board.getUser().getOid().equals(userOid)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only board owner can update collaborator access");
         }
@@ -396,7 +380,7 @@ public class BoardsController {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Users currentUser = usersRepository.findByName(username);
 
-        // Check permissions
+
         boolean isOwner = board.getUser().getOid().equals(userOid);
         boolean isCollaboratorLeaving = collab_oid.equals(userOid);
         boolean isCollaborator = collabsBoardsRepository.existsByOidAndBoardBoardId(currentUser.getOid(), id);
@@ -415,24 +399,20 @@ public class BoardsController {
 
 
     private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
-        // ค้นหาบอร์ดจาก boardId
+
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
-
-        // ตรวจสอบว่าบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
-            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
+            return true;
         }
-        // หากไม่มี Token และบอร์ดเป็น Private ให้ return 403
+
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
         }
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-        // ดึงข้อมูล Token และ OID ของผู้ใช้
 
-        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
         if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
@@ -441,7 +421,7 @@ public class BoardsController {
     }
     private boolean canManageTasksAndStatuses(String userOid, String boardId) {
         Boards board = boardService.findBoardById(boardId);
-        return board.getUser().getOid().equals(userOid) || // Is owner
-                collabsService.hasWriteAccess(userOid, boardId); // Is collaborator with WRITE access
+        return board.getUser().getOid().equals(userOid) ||
+                collabsService.hasWriteAccess(userOid, boardId);
     }
 }

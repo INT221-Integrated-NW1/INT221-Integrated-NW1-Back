@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-@Table(name = "status") // เปลี่ยนชื่อตารางให้สอดคล้องกับหลาย status
+@Table(name = "status")
 public class Status {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +34,4 @@ public class Status {
     @JsonIgnore
     private List<BoardStatus> boardStatuses;
 
-    public int getNoOfTasks() {
-        return tasks.size();
-    }
 }

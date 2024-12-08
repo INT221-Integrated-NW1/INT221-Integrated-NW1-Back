@@ -56,15 +56,10 @@ public class StatusesService {
     public Statuses createStatus(Statuses status) {
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        // Validate REQUIRED statusName
         if (status.getName() == null || status.getName().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("name", "must not be null"));
         }
 
-       // Validate non-UNIQUE statusName
-//        if (statusesRepository.existsByName(status.getName())) {
-//            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
-//        }
         if (status.getName() == null || status.getName().length() > 50) {
             errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));
         }
@@ -86,25 +81,14 @@ public class StatusesService {
     }
 
     public Statuses updateStatus(String id, Statuses status) {
-        // Find the existing status
         Statuses existingStatus = statusesRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status with ID " + id + " not found"));
 
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        // Cannot Edit or Delete "No Status" and "Done"
-//        if (isNoStatus(existingStatus.getName())) {
-//            errors.add(new MultiFieldException.FieldError("name", "The status name 'No Status' cannot be changed"));
-//        }
-//        if (isDone(existingStatus.getName())) {
-//            errors.add(new MultiFieldException.FieldError("name", "The status name 'Done' cannot be changed"));
-//        }
-
-        // Validate REQUIRED statusName
         if (status.getName() == null || status.getName().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("name", "must not be null."));
         }
-        // Validate non-UNIQUE statusName
         if (!existingStatus.getName().equals(status.getName()) && statusesRepository.existsByName(status.getName())) {
             errors.add(new MultiFieldException.FieldError("name", "must be unique"));
         }
@@ -119,12 +103,10 @@ public class StatusesService {
             throw new MultiFieldException(errors);
         }
 
-        // Set the existing status with new values
         existingStatus.setName(status.getName());
         existingStatus.setDescription(status.getDescription());
 
         try {
-            // Save the updated status
             return statusesRepository.save(existingStatus);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update status.", e);
@@ -134,7 +116,6 @@ public class StatusesService {
 
     @Transactional(transactionManager = "serverTransactionManager")
     public Statuses deleteStatus(String id) {
-        // Find the existing status
         Statuses status = statusesRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with ID " + id + " not found"));
 
@@ -149,7 +130,6 @@ public class StatusesService {
         }
 
         try {
-            // Delete the status
             statusesRepository.deleteById(id);
             return status;
         } catch (Exception e) {
@@ -159,11 +139,9 @@ public class StatusesService {
 
     @Transactional(transactionManager = "serverTransactionManager")
     public void transferAndDeleteStatus(String oldStatusId, String newStatusId) {
-        // ดึงสถานะเดิมที่ต้องการลบ
         Statuses oldStatus = statusesRepository.findById(oldStatusId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "the specified status for task transfer does not exist"));
 
-        // ดึงสถานะใหม่ที่ต้องการโอนไป
         Statuses newStatus = statusesRepository.findById(newStatusId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "the specified status for task transfer does not exist"));
 
@@ -172,18 +150,14 @@ public class StatusesService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "destination status for task transfer must be different from current status");
         }
 
-        // ดึงงานที่มีสถานะเดิม
         List<Tasks> tasksToUpdate = tasksRepository.findByStatus(oldStatus);
 
-        // โอนงานไปยังสถานะใหม่
         for (Tasks task : tasksToUpdate) {
             task.setStatus(newStatus);
         }
 
-        // บันทึกการเปลี่ยนแปลง
         tasksRepository.saveAll(tasksToUpdate);
 
-        // ลบสถานะเดิม
         statusesRepository.delete(oldStatus);
     }
 
@@ -203,10 +177,5 @@ public class StatusesService {
         }
     }
 
-//    private void checkStatusNameExists(String name) {
-//        if (statusesRepository.findByName(name) != null) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status name already exists!");
-//        }
-//    }
 
 }

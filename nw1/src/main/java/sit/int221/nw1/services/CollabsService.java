@@ -74,7 +74,7 @@ public class CollabsService {
         return returnCollabsDTO;
     }
 
-    public List<CollabDTO> getBoardCollabs (String boardId) {
+    public List<CollabDTO> getBoardCollabs(String boardId) {
         Boards board = boardService.findBoardById(boardId);
         List<Collabs> boardCollabs = board.getCollaborators();
         List<CollabDTO> collabs = new ArrayList<>();
@@ -86,7 +86,7 @@ public class CollabsService {
         return collabs;
     }
 
-    public CollabDTO getBoardCollabByOid (String oid, String boardId) {
+    public CollabDTO getBoardCollabByOid(String oid, String boardId) {
         Collabs collab = collabsRepository.findCollabsByOidAndBoardId(oid, boardId);
         if (collab == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collab not found");
@@ -96,6 +96,7 @@ public class CollabsService {
 
         return collabDTO;
     }
+
     public CollabDTO updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight) {
         Collabs collab = collabsRepository.findCollabsByOidAndBoardId(collabOid, boardId);
         if (collab == null) {

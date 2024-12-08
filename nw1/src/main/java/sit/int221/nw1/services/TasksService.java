@@ -51,46 +51,43 @@ public class TasksService {
     public List<Tasks> getAllTask() {
         return tasksRepository.findAll();
     }
+
     public List<TaskDTO> getAllTasksByBoardId(String boardId, List<String> filterStatuses) {
 
-        // Determine the sort order
 
         List<Tasks> tasks = tasksRepository.findByBoardsBoardId(boardId);
 
 
-        // If filterStatuses is empty, return all tasks
         if (filterStatuses == null || filterStatuses.isEmpty()) {
             return tasks.stream().map(task -> {
                 TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-                taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
+                taskDTO.setBoardName(task.getBoards().getBoardName()); 
                 taskDTO.setStatus(task.getStatus().getName());
                 return taskDTO;
             }).collect(Collectors.toList());
         }
 
-        // Filter tasks by statuses if filterStatuses is provided
         List<Tasks> filteredTasks = tasks.stream()
-                .filter(task -> filterStatuses.contains(task.getStatus().getName())) // Filtering by status name
+                .filter(task -> filterStatuses.contains(task.getStatus().getName()))
                 .collect(Collectors.toList());
 
         return filteredTasks.stream().map(task -> {
             TaskDTO taskDTO = modelMapper.map(task, TaskDTO.class);
-            taskDTO.setBoardName(task.getBoards().getBoardName()); // Set board name
+            taskDTO.setBoardName(task.getBoards().getBoardName());
             taskDTO.setStatus(task.getStatus().getName());
             return taskDTO;
         }).collect(Collectors.toList());
     }
 
-    public List<Tasks> findTasksByBoardsIdAndStatusId(String boardId, String statusId){
+    public List<Tasks> findTasksByBoardsIdAndStatusId(String boardId, String statusId) {
         return tasksRepository.findTasksByBoards_BoardIdAndStatus_Id(boardId, statusId);
     }
 
 
     public TasksDTO findTasksById(Integer tasksId) {
         Tasks task = tasksRepository.findTasksById(tasksId)
-                .orElseThrow(() -> new ItemNotFoundException("Task ID " + tasksId+ " Not Found"));
+                .orElseThrow(() -> new ItemNotFoundException("Task ID " + tasksId + " Not Found"));
 
-//        TasksDTO tasksDTO = mapper.map(task, TasksDTO.class);
         TasksDTO tasksDTO = new TasksDTO();
         tasksDTO.setId(task.getId());
         tasksDTO.setTitle(task.getTitle());
@@ -103,20 +100,18 @@ public class TasksService {
 
         return tasksDTO;
     }
+
     public Tasks createTask(addDTO addDTO, String boardsId) {
         Tasks tasks = modelMapper.map(addDTO, Tasks.class);
 
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        // Validate the title
         if (tasks.getTitle() == null || tasks.getTitle().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("title", "Title is required."));
         }
 
-        // Check if the status is null and handle accordingly
         if (addDTO.getStatus() == null) {
             try {
-                // Fetch the default status (ID = 1) from the Statuses repository
                 Statuses defaultStatus = statusesRepository.findById("000000000000001")
                         .orElseThrow(() -> new Exception("Default status does not exist"));
                 tasks.setStatus(defaultStatus);
@@ -125,7 +120,6 @@ public class TasksService {
             }
         } else {
             try {
-                // Fetch the status based on the ID provided in the DTO
                 Statuses status = statusesRepository.findStatusesById(addDTO.getStatus())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status Not Found"));
                 tasks.setStatus(status);
@@ -134,12 +128,10 @@ public class TasksService {
             }
         }
 
-        // Validate the assignees length
         if (tasks.getAssignees() != null && tasks.getAssignees().length() > 30) {
             errors.add(new MultiFieldException.FieldError("assignees", "Assignees must be between 0 and 30 characters."));
         }
 
-        // If there are any validation errors, throw them
         if (!errors.isEmpty()) {
             throw new MultiFieldException(errors);
         }
@@ -147,7 +139,6 @@ public class TasksService {
         try {
             Boards boards = boardsRepository.findById(addDTO.getBoards()).orElseThrow(() -> new ItemNotFoundException("Board not found"));
             tasks.setBoards(boards);
-            // Save the task to the repository
             return tasksRepository.save(tasks);
         } catch (Exception e) {
             throw new CustomFieldException("internal", "Failed to save task: " + e.getMessage());
@@ -155,19 +146,15 @@ public class TasksService {
     }
 
     public Tasks updateTask(Integer id, updateTaskDTO updateTaskDTO) {
-        // Find the existing task
         Tasks existingTask = tasksRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with ID " + id + " does not exist."));
 
-        // Set values from DTO
         existingTask.setTitle(updateTaskDTO.getTitle());
         existingTask.setDescription(updateTaskDTO.getDescription());
         existingTask.setAssignees(updateTaskDTO.getAssignees());
 
-        // Trim values
         trim(existingTask);
 
-        // Validate the task
         List<MultiFieldException.FieldError> errors = validateTaskForUpdate(updateTaskDTO);
 
         if (!errors.isEmpty()) {
@@ -203,12 +190,9 @@ public class TasksService {
     }
 
 
-
-
     private List<MultiFieldException.FieldError> validateTaskForUpdate(updateTaskDTO updateTaskDTO) {
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
-        // Validate title
         if (updateTaskDTO.getTitle() == null || updateTaskDTO.getTitle().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("title", "must not be null"));
         }
@@ -216,28 +200,27 @@ public class TasksService {
             errors.add(new MultiFieldException.FieldError("title", "size must be between 0 and 100"));
         }
 
-        // Validate description
         if (updateTaskDTO.getDescription() != null && updateTaskDTO.getDescription().length() > 500) {
             errors.add(new MultiFieldException.FieldError("description", "size must be between 0 and 500"));
         }
 
-        // Validate assignees
         if (updateTaskDTO.getAssignees() != null && updateTaskDTO.getAssignees().length() > 30) {
             errors.add(new MultiFieldException.FieldError("assignees", "size must be between 0 and 30"));
         }
 
-        // Validate status
         if (updateTaskDTO.getStatus() == null) {
             errors.add(new MultiFieldException.FieldError("status", "Status is required."));
         }
 
         return errors;
     }
+
     private void trim(Tasks tasks) {
         tasks.setTitle(StringUtil.trimToNull(tasks.getTitle()));
         tasks.setDescription(StringUtil.trimToNull(tasks.getDescription()));
         tasks.setAssignees(StringUtil.trimToNull(tasks.getAssignees()));
     }
+
     public void saveAll(List<Tasks> tasks) {
         tasksRepository.saveAll(tasks);
     }

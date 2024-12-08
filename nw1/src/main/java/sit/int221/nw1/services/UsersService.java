@@ -15,7 +15,8 @@ public class UsersService {
 
     @Autowired
     private UsersRepository userRepository;
-    private final Argon2PasswordEncoder passwordEncoder = new Argon2PasswordEncoder(16,  // saltLength
+    private final Argon2PasswordEncoder passwordEncoder = new Argon2PasswordEncoder(
+            16,  // saltLength
             32,  // hashLength
             1,   // parallelism
             65536,  // memory

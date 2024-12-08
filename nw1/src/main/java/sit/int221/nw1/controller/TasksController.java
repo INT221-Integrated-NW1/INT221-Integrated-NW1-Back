@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.web.server.ResponseStatusException;
 import sit.int221.nw1.dto.requestDTO.addDTO;
-//import sit.int221.nw1.dto.requestDTO.deleteDTO;
 import sit.int221.nw1.dto.requestDTO.deleteTaskDTO;
 import sit.int221.nw1.dto.requestDTO.updateTaskDTO;
 import sit.int221.nw1.dto.responseDTO.TaskDTO;
@@ -64,7 +63,6 @@ public class TasksController {
             @PathVariable String boardId,
             @RequestParam(value = "filterStatuses", required = false) List<String> filterStatuses) {
 
-        // ตรวจสอบว่ามีการส่ง Authorization header หรือไม่
         isUserAuthorizedForGETBoard(rawToken, boardId);
 
 
@@ -81,7 +79,6 @@ public class TasksController {
 
 
         isUserAuthorizedForGETBoard(rawToken, boardId);
-//        Tasks tasks = new Tasks();
         TasksDTO tasks = tasksService.findTasksById(taskId);
         return ResponseEntity.ok(tasks);
     }
@@ -119,7 +116,6 @@ public class TasksController {
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
-        // Get board first
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
@@ -134,10 +130,8 @@ public class TasksController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
 
-        // Check if user is a collaborator
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-        // Return 403 if the user is a collaborator without modify rights
         if (isCollaborator) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.FORBIDDEN.value(),
@@ -147,7 +141,6 @@ public class TasksController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
 
-        // Regular authorization check for other cases
         boolean isUserAuthorizedForUpdateTask = isUserAuthorizedForUpdateTask(rawToken, boardId, userOid, board);
 
         if (!isUserAuthorizedForUpdateTask) {
@@ -159,7 +152,6 @@ public class TasksController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
 
-        // Check request body for valid input
         if (updateTaskDTO == null) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.BAD_REQUEST.value(),
@@ -169,7 +161,6 @@ public class TasksController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
 
-        // Proceed with updating the task
         updateTaskDTO.setId(taskId);
         Tasks updatedTask = tasksService.updateTask(taskId, updateTaskDTO);
         addDTORespond addDTORespond = modelMapper.map(updatedTask, addDTORespond.class);
@@ -206,76 +197,45 @@ public class TasksController {
         TaskResponse deletedTask = tasksService.deleteTasks(taskId);
         return ResponseEntity.ok(deletedTask);
     }
-
-    private boolean isUserAuthorizedForBoard(String rawToken, String boardId) {
-        // ค้นหาบอร์ดจาก boardId
-        Boards board = boardsRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-
-        // ตรวจสอบว่าบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง
-        if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().startsWith("PUBLIC")) {
-            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
-        }
-
-        // หากไม่มี Token และบอร์ดเป็น Private ให้ return 403
-        if (rawToken == null || !rawToken.startsWith("Bearer ")) {
-            throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
-        }
-
-        // ดึงข้อมูล Token และ OID ของผู้ใช้
-        String token = rawToken.substring(7);
-        String userOid = jwtTokenUtil.getOid(token);
-
-        // ตรวจสอบสิทธิ์ของผู้ใช้ หากผู้ใช้ไม่ใช่เจ้าของบอร์ดให้ return 403
-        if (board.getVisibility().equals("PRIVATE") && !board.getUser().getOid().equals(userOid)) {
-            throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
-        }
-
-
-        return true;
-    }
-
+    
     private boolean isUserAuthorizedForUpdateTask(String rawToken, String boardId, String userOid, Boards board) {
-        // Check if the user is the owner of the board
         if (board.getUser().getOid().equals(userOid)) {
             return true;
         }
 
-        // If the board is public, return false (403 Forbidden)
         if (board.getVisibility().equals("PUBLIC")) {
             return false;
         }
 
-        // If the board is private, check if the user is a collaborator
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
         return isCollaborator;
     }
 
     private boolean isUserAuthorizedForGETBoard(String rawToken, String boardId) {
-        // ค้นหาบอร์ดจาก boardId
+
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
-        // หากบอร์ดเป็น Public และไม่มีการส่ง Token หรือ Token ไม่ถูกต้อง ให้อนุญาตการเข้าถึง
+
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().equals("PUBLIC")) {
-            return true; // ให้สามารถเข้าถึงบอร์ด Public ได้โดยไม่ต้องใช้ Token
+            return true;
         }
 
-        // หากไม่มี Token หรือ Token ไม่ถูกต้อง และบอร์ดเป็น Private ให้โยน AccessDeniedException
+
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
         }
 
-        // ดึง Token และข้อมูล OID ของผู้ใช้จาก Token
+
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
-        // ตรวจสอบว่าผู้ใช้เป็นเจ้าของบอร์ด หรือเป็น Collaborator
+
         if (board.getVisibility().equals("PRIVATE")) {
             boolean isOwner = board.getUser().getOid().equals(userOid);
             boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-            // หากผู้ใช้ไม่ใช่เจ้าของและไม่เป็น Collaborator ให้โยน AccessDeniedException
+  
             if (!isOwner && !isCollaborator) {
                 throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
             }
@@ -287,25 +247,21 @@ public class TasksController {
     private boolean isUserAuthorizedForBoardWithWriteAccess(String rawToken, String boardId) {
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-
-        // Check if the board is public and the user has not provided a valid token
+        
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().equals("PUBLIC")) {
-            return true; // Allow access to public boards without a token
+            return true; 
         }
 
-        // If no token is provided or the token is invalid, deny access to private boards
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
             throw new AccessDeniedException("Access denied. You must provide a valid token to access this board.");
         }
 
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-
-        // Check if the user is the owner of the board or has write access as a collaborator
+        
         boolean isOwner = board.getUser().getOid().equals(userOid);
         boolean hasWriteAccess = collabsService.hasWriteAccess(userOid, boardId);
-
-        // If the user is not the owner and does not have write access, deny access
+        
         if (!isOwner && !hasWriteAccess) {
             throw new AccessDeniedException("Access denied. You do not have permission to create tasks on this board.");
         }

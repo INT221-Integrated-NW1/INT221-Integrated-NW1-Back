@@ -44,7 +44,6 @@ public class JwtUserDetailsService implements UserDetailsService {
         return new AuthUser(user.getOid(), user.getName(), user.getUsername(), user.getPassword(), user.getEmail(), user.getRole(), roles);
     }
 
-    // New method to load user by OID
     public UserDetails loadUserByOid(String oid) throws UsernameNotFoundException {
         Users user = usersRepository.findByOid(oid);
 

@@ -7,7 +7,6 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// User.java
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -42,8 +41,6 @@ public class User {
     public User(String oid) {
         this.oid = oid;
     }
-
-    // Method to check if the user is the owner of a board
 }
 
 

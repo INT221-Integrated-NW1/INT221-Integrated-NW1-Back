@@ -60,43 +60,27 @@ public class UsersController {
 
     }
 
-//    @PostMapping("/login")
-//    public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {
-//        Users users = repository.findByName(jwtRequestDTO.getUserName());
-//        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
-//        Authentication authentication = authenticationManager.authenticate(authenticationToken);
-//
-//        UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
-//        String token = jwtTokenUtil.generateToken(userDetails,users);
-//
-//        JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder().accessToken(token).build();
-//
-//        return ResponseEntity.ok(jwtResponseDTO);
-//    }
-//}
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody JwtDTO jwtRequestDTO) {
-        // Authenticate user
+
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(jwtRequestDTO.getUserName(), jwtRequestDTO.getPassword());
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
-        // Optional: set the authentication in the security context
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(jwtRequestDTO.getUserName());
         Users user = repository.findByName(jwtRequestDTO.getUserName());
 
-        // Ensure user is found
+   
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if user not found
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); 
         }
 
         String accessToken = jwtTokenUtil.generateToken(userDetails, user);
-        String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails, user); // New method for refresh token
+        String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails, user); 
 
-        // Return both tokens
         JwtResponseDTO jwtResponseDTO = JwtResponseDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -108,14 +92,14 @@ public class UsersController {
     public ResponseEntity<JwtRefreshDTO> refreshAccessToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if no token provided
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); 
         }
 
         String refreshToken = authHeader.substring(7);
         try {
 
             if (jwtTokenUtil.isTokenExpired(refreshToken)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if token is expired
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); 
             }
 
             String oid = jwtTokenUtil.getOid(refreshToken);
@@ -130,7 +114,7 @@ public class UsersController {
 
             return ResponseEntity.ok(jwtRefreshDTO);
         } catch (UsernameNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // 401 if user not found
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
