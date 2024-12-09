@@ -60,28 +60,15 @@ public class UserSecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/v3/boards","/v3/boards/{id}",
                                 "/v3/boards/{boardId}/tasks","/v3/boards/{boardId}/tasks/{taskId}",
-                                "/v3/boards/{boardId}/statuses","/v3/boards/{boardId}/statuses/{id}").permitAll()  // อนุญาตให้เข้าถึงเฉพาะ GET requests สำหรับเส้นทางที่กำหนด
-                        .requestMatchers("/login").permitAll()  // อนุญาตให้เข้าถึง /login ได้โดยไม่ต้องมีการตรวจสอบสิทธิ์
-                        .anyRequest().authenticated())  // การร้องขออื่นๆ ต้องมีการตรวจสอบสิทธิ์
+                                "/v3/boards/{boardId}/statuses","/v3/boards/{boardId}/statuses/{id}","/v3/boards/info/{boardId}").permitAll()
+                        .requestMatchers("/login").permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(authExceptionHandler))  // ใช้ authExceptionHandler เมื่อมีข้อผิดพลาดเกี่ยวกับการตรวจสอบสิทธิ์
+                        .authenticationEntryPoint(authExceptionHandler))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(withDefaults());
         return httpSecurity.build();
     }
 
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-//        httpSecurity.csrf(csrf -> csrf.disable())
-//                .cors(Customizer.withDefaults())
-//                .authorizeHttpRequests(authorize -> authorize
-//                        .requestMatchers("/login","/v3/boards").permitAll()
-//                        // Allow access to /api/login without authentication
-//                        .anyRequest().authenticated())  // All other requests require authentication
-//                .exceptionHandling(exceptionHandling -> exceptionHandling
-//                        .authenticationEntryPoint(authExceptionHandler))  // Use injected instance
-//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-//                .httpBasic(withDefaults());
-//        return httpSecurity.build();
-//    }
+
 }

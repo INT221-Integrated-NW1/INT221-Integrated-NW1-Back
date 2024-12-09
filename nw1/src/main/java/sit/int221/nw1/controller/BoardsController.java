@@ -86,6 +86,7 @@ public class BoardsController {
 
         return ResponseEntity.ok(boardDTOs);
     }
+
     @GetMapping("/boards/{boardId}")
     public ResponseEntity<Object> getBoardById(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
                                                @PathVariable String boardId) {
@@ -102,19 +103,21 @@ public class BoardsController {
         boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
+
+
         if (board.getVisibility().equals("PRIVATE") && !isOwner && !isCollaborator) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
         }
-
 
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
         BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), board.getCreated_On(), userResponseDTO);
 
         return ResponseEntity.ok(boardsResponseDTO);
     }
+
     @GetMapping("/boards/info/{boardId}")
     public ResponseEntity<Object> getBoardCollabInfo(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
-                                               @PathVariable String boardId) {
+                                                     @PathVariable String boardId) {
         String userOid = null;
 
         if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
@@ -145,6 +148,7 @@ public class BoardsController {
         boardsResponseDTO.setCollaborators(collaborators);
         return ResponseEntity.ok(boardsResponseDTO);
     }
+
     @GetMapping("/boards/{boardId}/collabs")
     public ResponseEntity<Object> getBoardCollabs(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
@@ -152,7 +156,7 @@ public class BoardsController {
     ) {
         Boards board = boardService.findBoardById(boardId);
         List<CollabDTO> collaborators = collabsService.getBoardCollabs(boardId);
-        if (board.getVisibility().equals("PUBLIC")){
+        if (board.getVisibility().equals("PUBLIC")) {
             return ResponseEntity.ok(collaborators);
         }
         if (rawToken == null) {
@@ -212,7 +216,7 @@ public class BoardsController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
             @Valid @RequestBody(required = false) BoardNameRequestDTO boardName
     ) {
-        if (boardName==null || boardName.getName()==null) {
+        if (boardName == null || boardName.getName() == null) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "boardName is missing", null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
@@ -322,11 +326,11 @@ public class BoardsController {
         String userOid = jwtTokenUtil.getOid(token);
         String oid;
         isUserAuthorizedForBoard(rawToken, id);
-        if (!board.getUser().getOid().equals(userOid)&&board.getVisibility().startsWith("PUBLIC")) {
+        if (!board.getUser().getOid().equals(userOid) && board.getVisibility().startsWith("PUBLIC")) {
             throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
         }
 
-        if (request==null || request.getVisibility()==null) {
+        if (request == null || request.getVisibility() == null) {
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Visibility is missing");
         }
@@ -355,6 +359,7 @@ public class BoardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid visibility value");
         }
     }
+
     @PatchMapping("/boards/{id}/collabs/{collab_oid}")
     public ResponseEntity<Object> updateCollaboratorAccess(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String rawToken,
@@ -424,8 +429,8 @@ public class BoardsController {
         if (!isOwner && !(isCollaborator && currentUser.getOid().equals(collab_oid))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not allowed to remove this collaborator.");
         }
-            collabsService.removeCollaborator(id, collab_oid);
-            return ResponseEntity.ok().build();
+        collabsService.removeCollaborator(id, collab_oid);
+        return ResponseEntity.ok().build();
 
     }
 
@@ -451,6 +456,7 @@ public class BoardsController {
 
         return true;
     }
+
     private boolean canManageTasksAndStatuses(String userOid, String boardId) {
         Boards board = boardService.findBoardById(boardId);
         return board.getUser().getOid().equals(userOid) ||

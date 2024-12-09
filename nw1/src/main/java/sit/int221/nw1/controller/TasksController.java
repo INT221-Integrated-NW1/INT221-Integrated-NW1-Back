@@ -197,7 +197,7 @@ public class TasksController {
         TaskResponse deletedTask = tasksService.deleteTasks(taskId);
         return ResponseEntity.ok(deletedTask);
     }
-    
+
     private boolean isUserAuthorizedForUpdateTask(String rawToken, String boardId, String userOid, Boards board) {
         if (board.getUser().getOid().equals(userOid)) {
             return true;
@@ -235,7 +235,7 @@ public class TasksController {
             boolean isOwner = board.getUser().getOid().equals(userOid);
             boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-  
+
             if (!isOwner && !isCollaborator) {
                 throw new AccessDeniedException("Access denied. You do not have permission to access this private board.");
             }
@@ -247,9 +247,9 @@ public class TasksController {
     private boolean isUserAuthorizedForBoardWithWriteAccess(String rawToken, String boardId) {
         Boards board = boardsRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
-        
+
         if ((rawToken == null || !rawToken.startsWith("Bearer ")) && board.getVisibility().equals("PUBLIC")) {
-            return true; 
+            return true;
         }
 
         if (rawToken == null || !rawToken.startsWith("Bearer ")) {
@@ -258,10 +258,10 @@ public class TasksController {
 
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-        
+
         boolean isOwner = board.getUser().getOid().equals(userOid);
         boolean hasWriteAccess = collabsService.hasWriteAccess(userOid, boardId);
-        
+
         if (!isOwner && !hasWriteAccess) {
             throw new AccessDeniedException("Access denied. You do not have permission to create tasks on this board.");
         }
