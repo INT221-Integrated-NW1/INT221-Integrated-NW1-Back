@@ -91,6 +91,32 @@ public class BoardsController {
                                                @PathVariable String boardId) {
         String userOid = null;
 
+        // Check if the rawToken is present and valid
+        if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
+            String token = rawToken.substring(7);
+            userOid = jwtTokenUtil.getOid(token);
+        }
+
+        Boards board = boardService.findBoardById(boardId);
+
+        boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
+        boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
+
+        if (board.getVisibility().equals("PRIVATE") && !isOwner && !isCollaborator) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
+        }
+
+
+        UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
+        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), board.getCreated_On(), userResponseDTO);
+
+        return ResponseEntity.ok(boardsResponseDTO);
+    }
+    @GetMapping("/boards/info/{boardId}")
+    public ResponseEntity<Object> getBoardCollabInfo(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String rawToken,
+                                               @PathVariable String boardId) {
+        String userOid = null;
+
         if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
             String token = rawToken.substring(7);
             userOid = jwtTokenUtil.getOid(token);
@@ -107,7 +133,7 @@ public class BoardsController {
         }
 
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
-        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(
+        CollabInfo boardsResponseDTO = new CollabInfo(
                 board.getBoardId(),
                 board.getBoardName(),
                 board.getVisibility(),
@@ -117,7 +143,6 @@ public class BoardsController {
         );
 
         boardsResponseDTO.setCollaborators(collaborators);
-
         return ResponseEntity.ok(boardsResponseDTO);
     }
     @GetMapping("/boards/{boardId}/collabs")

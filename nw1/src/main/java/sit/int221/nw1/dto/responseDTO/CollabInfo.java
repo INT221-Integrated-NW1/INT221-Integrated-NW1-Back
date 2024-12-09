@@ -14,12 +14,14 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class BoardsResponseDTO {
+
+public class CollabInfo {
     private String id;
     private String name;
     private String visibility;
     private ZonedDateTime createdOn;
     private UserResponseDTO user;
+    private List<CollabDTO> collaborators;
 }
 
 
