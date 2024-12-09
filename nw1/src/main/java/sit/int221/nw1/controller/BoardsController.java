@@ -91,25 +91,32 @@ public class BoardsController {
                                                @PathVariable String boardId) {
         String userOid = null;
 
-
         if (rawToken != null && rawToken.startsWith("Bearer ") && !rawToken.equals("Bearer null")) {
             String token = rawToken.substring(7);
             userOid = jwtTokenUtil.getOid(token);
         }
 
         Boards board = boardService.findBoardById(boardId);
-
+        List<CollabDTO> collaborators = collabsService.getBoardCollabs(boardId);
 
         boolean isOwner = (userOid != null && board.getUser().getOid().equals(userOid));
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
-
 
         if (board.getVisibility().equals("PRIVATE") && !isOwner && !isCollaborator) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not have access to this board.");
         }
 
         UserResponseDTO userResponseDTO = new UserResponseDTO(board.getUser().getOid(), board.getUser().getName());
-        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(board.getBoardId(), board.getBoardName(), board.getVisibility(), board.getCreated_On(), userResponseDTO);
+        BoardsResponseDTO boardsResponseDTO = new BoardsResponseDTO(
+                board.getBoardId(),
+                board.getBoardName(),
+                board.getVisibility(),
+                board.getCreated_On(),
+                userResponseDTO,
+                collaborators
+        );
+
+        boardsResponseDTO.setCollaborators(collaborators);
 
         return ResponseEntity.ok(boardsResponseDTO);
     }
@@ -232,7 +239,7 @@ public class BoardsController {
         boardStatusService.SaveDefaultBoardStatus(boardStatuses);
 
 
-        BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+        addBoardDTOResponse returnBoardDTO = new addBoardDTOResponse(
                 createdBoard.getBoardId(),
                 createdBoard.getBoardName(),
                 createdBoard.getVisibility(),
@@ -307,7 +314,7 @@ public class BoardsController {
 
         try {
             Boards updatedBoard = boardService.updateBoardVisibility(id, request.getVisibility(), oid);
-            BoardsResponseDTO returnBoardDTO = new BoardsResponseDTO(
+            addBoardDTOResponse returnBoardDTO = new addBoardDTOResponse(
                     updatedBoard.getBoardId(),
                     updatedBoard.getBoardName(),
                     updatedBoard.getVisibility(),
