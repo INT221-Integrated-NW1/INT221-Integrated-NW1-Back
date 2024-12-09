@@ -132,7 +132,7 @@ public class TasksController {
 
         boolean isCollaborator = boardService.getIsBoardCollaborator(userOid, boardId);
 
-        if (isCollaborator) {
+        if (!isCollaborator) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.FORBIDDEN.value(),
                     "Collaborators can read but cannot modify tasks",
