@@ -56,9 +56,15 @@ public class StatusesService {
     public Statuses createStatus(Statuses status) {
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
+
+        if (statusesRepository.existsByName(status.getName())) {
+            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+        }
+
         if (status.getName() == null || status.getName().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("name", "must not be null"));
         }
+
 
         if (status.getName() == null || status.getName().length() > 50) {
             errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));
