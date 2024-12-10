@@ -8,5 +8,5 @@ import java.util.Optional;
 public interface StatusesRepository extends JpaRepository<Statuses, String> {
     boolean existsByName(String name);
     Optional<Statuses> findStatusesById(String Id);
-
+    Optional<Statuses> findStatusesByBoardStatusesAndId(String BoardStatus ,String id);
 }

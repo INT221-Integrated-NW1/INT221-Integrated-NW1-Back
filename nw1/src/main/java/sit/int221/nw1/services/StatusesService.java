@@ -13,6 +13,7 @@ import sit.int221.nw1.dto.responseDTO.StatusDTO;
 import sit.int221.nw1.dto.responseDTO.StatusesRespondDTO;
 import sit.int221.nw1.exception.ItemNotFoundException;
 import sit.int221.nw1.exception.MultiFieldException;
+import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
 import sit.int221.nw1.models.server.Tasks;
@@ -45,9 +46,6 @@ public class StatusesService {
     private static final Logger logger = LoggerFactory.getLogger(StatusesService.class);
 
 
-    public List<Statuses> getAllStatus() {
-        return statusesRepository.findAll();
-    }
 
     public Statuses getStatusById(String Id) {
         return statusesRepository.findStatusesById(Id).orElseThrow(() -> new ItemNotFoundException("NOT FOUND"));
@@ -57,9 +55,9 @@ public class StatusesService {
         List<MultiFieldException.FieldError> errors = new ArrayList<>();
 
 
-        if (statusesRepository.existsByName(status.getName())) {
-            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
-        }
+//        if (statusesRepository.existsByName(status.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+//        }
 
         if (status.getName() == null || status.getName().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("name", "must not be null"));
@@ -86,7 +84,7 @@ public class StatusesService {
         }
     }
 
-    public Statuses updateStatus(String id, Statuses status) {
+    public Statuses updateStatus(String id, Statuses status ) {
         Statuses existingStatus = statusesRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Status with ID " + id + " not found"));
 
@@ -95,9 +93,9 @@ public class StatusesService {
         if (status.getName() == null || status.getName().isEmpty()) {
             errors.add(new MultiFieldException.FieldError("name", "must not be null."));
         }
-        if (!existingStatus.getName().equals(status.getName()) && statusesRepository.existsByName(status.getName())) {
-            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
-        }
+//         if (!existingStatus.getName().equals(status.getName()) && statusesRepository.existsByName(status.getName())) {
+//            errors.add(new MultiFieldException.FieldError("name", "must be unique"));
+//        }
 
         if (status.getName() == null || status.getName().length() > 50) {
             errors.add(new MultiFieldException.FieldError("name", "size must be between 0 and 50"));

@@ -22,6 +22,7 @@ import sit.int221.nw1.models.server.BoardStatus;
 import sit.int221.nw1.models.server.Boards;
 import sit.int221.nw1.models.server.Statuses;
 import sit.int221.nw1.models.server.Tasks;
+import sit.int221.nw1.repositories.server.BoardStatusRepository;
 import sit.int221.nw1.repositories.server.BoardsRepository;
 import sit.int221.nw1.services.*;
 
@@ -124,6 +125,7 @@ public class StatusesController {
 
         isUserAuthorizedForBoardWithWriteAccess(rawToken, boardId);
         Statuses existingStatus = statusesService.getStatusById(id);
+
         if (existingStatus == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Status not found");
         }
@@ -137,7 +139,7 @@ public class StatusesController {
         }
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
-
+        Statuses status = modelMapper.map(updateDTO, Statuses.class);
         boolean isOwner = board.getUser().getOid().equals(userOid);
         boolean hasWriteAccess = collabsService.hasWriteAccess(userOid, boardId);
         if (!isOwner && !hasWriteAccess) {
@@ -151,8 +153,22 @@ public class StatusesController {
         if (id.equals("000000000000001") || id.equals("000000000000004")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The status '" + existingStatus.getName() + "' cannot be edited");
         }
+        if (id.equals("000000000000002") || id.equals("000000000000003")) {
+            BoardStatus bs = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
+            Statuses s1 = new Statuses();
+            s1.setName(updateDTO.getName());
+            s1.setDescription(updateDTO.getDescription());
+            Statuses newStatus = statusesService.createStatus(s1);
+            bs.setStatus(newStatus);
+            List<Tasks> tasks = tasksService.findTasksByBoardsIdAndStatusId(boardId, id);
+            for (Tasks task : tasks) {
+                task.setStatus(newStatus);
+            }
+            tasksService.saveAll(tasks);
+            boardStatusService.updateBoardStatusByBoardStatusId(bs);
+            return ResponseEntity.ok(newStatus);
+        }
 
-        Statuses status = modelMapper.map(updateDTO, Statuses.class);
         statusesService.updateStatus(id, status);
 
         Statuses updatedStatus = statusesService.getStatusById(id);
