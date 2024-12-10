@@ -138,46 +138,28 @@ public class StatusesController {
         String token = rawToken.substring(7);
         String userOid = jwtTokenUtil.getOid(token);
 
-
         boolean isOwner = board.getUser().getOid().equals(userOid);
         boolean hasWriteAccess = collabsService.hasWriteAccess(userOid, boardId);
         if (!isOwner && !hasWriteAccess) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. You do not have permission to update this status.");
         }
 
-
         if (updateDTO == null || updateDTO.getName().isEmpty()) {
             return ResponseEntity.badRequest().body("Request body is missing or malformed");
         }
 
-       
         if (id.equals("000000000000001") || id.equals("000000000000004")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The status '" + existingStatus.getName() + "' cannot be edited");
         }
 
+        Statuses status = modelMapper.map(updateDTO, Statuses.class);
+        statusesService.updateStatus(id, status);
 
-        if (id.equals("000000000000002") || id.equals("000000000000003")) {
-            BoardStatus bs = boardStatusService.findBoardStatusByBoardIdAndStatusId(boardId, id);
-            Statuses s1 = new Statuses();
-            s1.setName(updateDTO.getName());
-            s1.setDescription(updateDTO.getDescription());
-            Statuses newStatus = statusesService.createStatus(s1);
-            bs.setStatus(newStatus);
-            List<Tasks> tasks = tasksService.findTasksByBoardsIdAndStatusId(boardId, id);
-            for (Tasks task : tasks) {
-                task.setStatus(newStatus);
-            }
-            tasksService.saveAll(tasks);
-            boardStatusService.updateBoardStatusByBoardStatusId(bs);
-            return ResponseEntity.ok(newStatus);
-        }
-
-
-        statusesService.updateStatus(id, modelMapper.map(updateDTO, Statuses.class));
         Statuses updatedStatus = statusesService.getStatusById(id);
         updateStatusDTO updatedStatusDTO = modelMapper.map(updatedStatus, updateStatusDTO.class);
-
         return ResponseEntity.ok(updatedStatusDTO);
+
+
     }
 
 
