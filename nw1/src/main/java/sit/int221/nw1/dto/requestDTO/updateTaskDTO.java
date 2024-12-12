@@ -14,5 +14,5 @@ public class updateTaskDTO {
     private String description;
     @Size(min = 1,max = 30)
     private String assignees;
-    private Integer status;
+    private String status;
 }

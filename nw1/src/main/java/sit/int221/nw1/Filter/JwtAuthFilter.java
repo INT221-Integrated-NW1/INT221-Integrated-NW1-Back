@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import sit.int221.nw1.config.JwtTokenUtil;
+import sit.int221.nw1.models.client.Users;
+import sit.int221.nw1.repositories.client.UsersRepository;
 import sit.int221.nw1.services.JwtUserDetailsService;
 
 import java.io.IOException;
@@ -35,69 +37,43 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
+    @Autowired
+    private UsersRepository repository;
+
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String requestURI = request.getRequestURI();
+        String header = request.getHeader("Authorization");
+        if (header == null) {
+            request.setAttribute("error", "No Authorization header found");
+        } else {
+            try {
+                String token = header.substring(7);
+                String oid = jwtTokenUtil.getOid(token);
 
-        // Skip authentication for the /api/login endpoint
-        if ("/api/login".equals(requestURI)) {
-            chain.doFilter(request, response);
-            return;
-        }
+                if (oid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    String username = repository.findByOid(oid).getUsername();
+                    UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
 
-        final String requestTokenHeader = request.getHeader("Authorization");
-        String username = null;
-        String jwtToken = null;
+                    if (jwtTokenUtil.validateToken(token, userDetails)) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+                }
 
-        if (requestTokenHeader == null || !requestTokenHeader.startsWith("Bearer ")) {
-            logger.error("JWT Token is missing or not well-formed");
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token is missing or not well-formed");
-            return;
-        }
-
-        jwtToken = requestTokenHeader.substring(7);
-
-        try {
-            username = jwtTokenUtil.getUsernameFromToken(jwtToken);
-        } catch (IllegalArgumentException e) {
-            logger.error("Unable to get JWT Token", e);
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Unable to get JWT Token");
-            return;
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT Token has expired", e);
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token has expired");
-            return;
-        } catch (MalformedJwtException e) {
-            logger.error("JWT Token is not well-formed", e);
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token is not well-formed");
-            return;
-        } catch (SignatureException e) {
-            logger.error("JWT Token has been tampered with", e);
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token has been tampered with");
-            return;
-        } catch (Exception e) {
-            logger.error("An error occurred while processing JWT Token", e);
-            response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An error occurred while processing JWT Token");
-            return;
-        }
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.jwtUserDetailsService.loadUserByUsername(username);
-            if (jwtTokenUtil.validateToken(jwtToken, userDetails)) {
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } else {
-                logger.error("JWT Token is not valid");
-                response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token is not valid");
-                return;
+            } catch (io.jsonwebtoken.ExpiredJwtException ex) {
+                request.setAttribute("error", "Token Expired");
+            } catch (io.jsonwebtoken.MalformedJwtException ex) {
+                request.setAttribute("error", "Token is not well-formed JWT");
+            } catch (io.jsonwebtoken.SignatureException ex) {
+                request.setAttribute("error", "Token has been tampered with");
+            } catch (Exception ex) {
+                request.setAttribute    ("error", "Access is Denied");
             }
         }
-
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 }

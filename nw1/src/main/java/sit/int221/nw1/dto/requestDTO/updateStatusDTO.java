@@ -8,10 +8,12 @@ import lombok.Setter;
 @Setter
 
 public class updateStatusDTO {
-    private Integer id;
+    private String id;
     @Size(min =1 , max = 50)
     private String name;
     @Size(min =1 , max = 200)
     private String description;
+    private String boards;
+
 
 }

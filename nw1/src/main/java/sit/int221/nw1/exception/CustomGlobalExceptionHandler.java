@@ -2,6 +2,7 @@ package sit.int221.nw1.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,20 +14,21 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.util.List;
+
 
 @RestControllerAdvice
 public class CustomGlobalExceptionHandler {
-    //
-//    @ExceptionHandler(ItemNotFoundException.class)
-//    public ResponseEntity<CustomError> customHandleNotFound(Exception ex, WebRequest request) {
-//
-//        CustomError errors = new CustomError();
-//        errors.setTimestamp(LocalDateTime.now());
-//        errors.setMessage(ex.getMessage());
-//        errors.setStatus(HttpStatus.NOT_FOUND.value());
-//        errors.setInstance(request.getDescription(false).substring(4)); // remove "uri="
-//
-//        return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+//    @ExceptionHandler(HttpMessageNotReadableException.class)
+//    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, WebRequest request) {
+//        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Request body is missing or malformed", request.getDescription(false));
+//        return ResponseEntity.badRequest().body(errorResponse);
 //    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex, WebRequest request) {
@@ -45,35 +47,35 @@ public class CustomGlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-
-//    @ExceptionHandler(CustomFieldException.class)
-//    public ResponseEntity<ErrorResponse> handleCustomFieldException(CustomFieldException ex) {
-//        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details.", null);
-//        errorResponse.addValidationError(ex.getField(), ex.getMessage());
-//        return ResponseEntity.badRequest().body(errorResponse);
-//    }
-
-
-//    @ExceptionHandler(ResponseStatusException.class)
-//    public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex, WebRequest webRequest) {
-//        ErrorResponse errorResponse = new ErrorResponse(ex.getStatusCode().value(), ex.getMessage(), webRequest.getDescription(false));
-//        return ResponseEntity.badRequest().body(errorResponse);
-//    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Username or Password is incorrect", request.getDescription(false));
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), request.getDescription(false));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
+
+//    @ExceptionHandler(AuthenticationException.class)
+//    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+//    public ResponseEntity<ErrorResponse> handleAuthenticationException(WebRequest request) {
+//        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Username or Password is incorrect", request.getDescription(false));
+//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+//    }
+    @ExceptionHandler(MultiFieldException.class)
+    public ResponseEntity<List<MultiFieldException.FieldError>> handleMultiFieldException(MultiFieldException ex) {
+        return new ResponseEntity<>(ex.getFieldErrors(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ItemNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponse> handleItemNotFoundException(ItemNotFoundException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), request.getDescription(false));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+    // Handle AccessDeniedException หรือ ResponseStatusException
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(ex.getStatusCode().value(), ex.getReason(), request.getDescription(false));
+        return new ResponseEntity<>(errorResponse, ex.getStatusCode());
+    }
+
 }
-//}
-//    }
-//    @ExceptionHandler(ResponseStatusException.class)
-//    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("status", ex.getStatusCode().value());
-//        response.put("message", ex.getReason());
-//        response.put("error", ex.getStatusCode().toString()); // Replaced getReasonPhrase() with name()
-//        return new ResponseEntity<>(response, ex.getStatusCode());
-//    }
+
